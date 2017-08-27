@@ -22,7 +22,7 @@ typedef struct
 typedef struct
 {
 	List *list;
-	unsigned size;
+	unsigned _size;
 	bool(*isEmpty)(List* );
 	bool(*remove)(void*,List*, bool(*isEqual)(void* , void*));
 	void(*addArray)(void*, List** );

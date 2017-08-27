@@ -28,6 +28,7 @@ ArrayList* newArrayList()
 	arrayList->seach = ListSearch;
 	arrayList->destroyList = ListDestroy;
 	arrayList->size = getLength;
+	arrayList->_size = 0;
 
 	return arrayList;
 }
