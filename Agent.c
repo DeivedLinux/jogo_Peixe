@@ -12,7 +12,7 @@ Agent* newAgent(TypeAgent _type)
 	agent->type = _type;
 	agent->x = 0;
 	agent->y = 0;
-	agent->life = 0;
+	agent->blood = 0;
 
 	return agent;
 }

@@ -37,6 +37,8 @@ int main(int argc, char *argv[])
 
     game = newGame(SCREEN_WIDTH,SCREEN_HEIGHT,NULL,NULL);
 
+    GameInit(game);
+
     while(isRunning)
     {
 

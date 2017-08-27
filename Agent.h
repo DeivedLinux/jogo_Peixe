@@ -14,7 +14,7 @@ typedef struct
 {
 	int x;
 	int y;
-	int life;
+	int blood;
 	TypeAgent type;
 	SDL_Surface* sprite;
 }Agent;

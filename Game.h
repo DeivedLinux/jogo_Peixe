@@ -18,7 +18,7 @@ typedef struct
 Game* newGame(unsigned _width, unsigned _height, 
 	         const SDL_Surface* _background, const SDL_Surface* _font);
 
-
+void GameInit(Game* game);
 
 
 #endif

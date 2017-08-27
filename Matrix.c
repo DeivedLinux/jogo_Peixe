@@ -9,7 +9,7 @@ SparseArray* newSparceArray(int _row, int _column)
 
 	array->Dimension.row = _row;
 	array->Dimension.column = _column;
-	array->matrix = newArrayList();
+	array->list = newArrayList();
 
 	return array;
 }

@@ -5,7 +5,7 @@
 
 typedef struct 
 {
-	ArrayList* matrix;
+	ArrayList* list;
 	struct 
 	{
 		int row;
