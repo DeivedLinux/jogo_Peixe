@@ -2,11 +2,11 @@
 #define GAME_H_
 
 #include "Matrix.h"
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 typedef struct 
 {
-	SparceArray field;
+	SparseArray field;
 	unsigned time;
 	unsigned round;	
 	SDL_Surface* background;

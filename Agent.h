@@ -1,7 +1,7 @@
 #ifndef AGENT_H_
 #define AGENT_H_
 
-#include <SDL/SDL.h>
+#include <SDL2/SDL.h>
 
 
 typedef enum 

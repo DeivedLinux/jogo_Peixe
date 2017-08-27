@@ -1,16 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Game.h"
-#include <SDL/SDL.h>
 
 int main(int argc, char const *argv[])
 {
 
-
-	SDL_Init(SDL_INIT_EVERYTHING);
+ //The window we'll be rendering to
+    SDL_Window* window = NULL;
     
-    //Quit SDL
-    SDL_Quit();
+    //The surface contained by the window
+    SDL_Surface* screenSurface = NULL;
+
+    //Initialize SDL
+    if(SDL_Init( SDL_INIT_VIDEO ) < 0 )
+    {
+        printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
+    }
 
 	/* code */
 	return 0;
