@@ -15,6 +15,8 @@ typedef struct
 	void(*play)(void*);
 }Game;
 
+ extern SDL_Surface* screenSurface;
+
 Game* newGame(unsigned _width, unsigned _height, 
 	         const SDL_Surface* _background, const SDL_Surface* _font);
 

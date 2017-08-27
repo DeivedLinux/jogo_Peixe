@@ -12,10 +12,9 @@ int main(int argc, char *argv[])
 
     SDL_Window* window = NULL;
     bool isRunning = true;
-    Game* game;
+    SDL_Surface* gScreen = NULL;
+    Game* game = NULL;
     
-
-    SDL_Surface* screenSurface = NULL;
 
     if(SDL_Init( SDL_INIT_VIDEO ) < 0 )
     {
@@ -28,20 +27,27 @@ int main(int argc, char *argv[])
                                  SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, 
                                  SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
         
-        if( window == NULL )
+        if(window == NULL)
         {
             printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError());
             exit(-1);
         }
+        else
+        {
+            screenSurface = SDL_GetWindowSurface(window);
+        }
     }
 
-    game = newGame(SCREEN_WIDTH,SCREEN_HEIGHT,NULL,NULL);
+    gScreen = SDL_LoadBMP("Fundo do Mar.bmp");
+    game = newGame(SCREEN_WIDTH,SCREEN_HEIGHT,gScreen,NULL);
 
     GameInit(game);
 
     while(isRunning)
     {
-
+         game->play(game);
+         SDL_UpdateWindowSurface(window);
+         SDL_Delay(10);
     }
 
 

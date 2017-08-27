@@ -7,6 +7,8 @@
 #define getGame(Obj)    ((Game*)(Obj))
 #define getList(Obj)    field->list
 
+ SDL_Surface* screenSurface = NULL;
+
 static void PlayGame(void* game);
 static bool isEqualCoord(void* el, void* info)
 {
@@ -61,8 +63,13 @@ void GameInit(Game* game)
 }
 static void PlayGame(void* game)
 {
+	SDL_Rect rect;
+
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = 480;
+    rect.h = 320;
 	
-
-
-
+    SDL_BlitSurface(getGame(game)->background,NULL,screenSurface,&rect); 
+ 
 }
