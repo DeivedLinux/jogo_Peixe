@@ -26,6 +26,6 @@ typedef enum
 	ATTACK
 }StateShark;
 
-Agent* newAgent(TypeAgent type);
+Agent* newAgent(TypeAgent _type);
 
 #endif
