@@ -1,31 +1,52 @@
 #ifndef AGENT_H_
 #define AGENT_H_
 
-#include "SDL2/SDL.h"
-
+#include <SDL.h>
 
 typedef enum 
 {
-	FISH,
-	SHARK
-}TypeAgent;
+	SHARK_IDLE,
+	SHARK_CHASE,
+	SHARK_ATTACK
+} StateShark;
+
+typedef enum
+{
+	FISH_IDLE,
+	FISH_RUNNING
+} StateFish;
+
 
 typedef struct 
 {
 	int x;
 	int y;
 	int life;
-	TypeAgent type;
 	SDL_Surface* sprite;
-}Agent;
+} Object;
+
+typedef struct{
+	StateShark state;
+	int captureRange;
+	Object obj;
+	int indexFish;
+} Shark;
+
+typedef struct{
+	StateFish state;
+	int perceptionRange;
+	Object obj;
+	int indexShark;
+} Fish;
 
 typedef enum 
 {
-	IDLE,
-	CHASE,
-	ATTACK
-}StateShark;
+	FISH,
+	SHARK
+} TypeAgent;
 
-Agent* newAgent(TypeAgent type);
+
+
+//Agent* newAgent(TypeAgent type);
 
 #endif
