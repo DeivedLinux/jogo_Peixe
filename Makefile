@@ -1,4 +1,4 @@
-OBJS = Agent.c ArrayList.c main.c
+OBJS = Agent.c ArrayList.c main.c Game.c Matrix.c
 CC = gcc
 INCLUDE_PATHS = -IC:\TDM-GCC-64\include
 LIBRARY_PATHS = -IC:\TDM-GCC-64\lib

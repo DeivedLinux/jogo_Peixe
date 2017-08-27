@@ -10,9 +10,9 @@ static const unsigned SCREEN_HEIGHT = 270;
 int main(int argc, char *argv[])
 {
 
-
     SDL_Window* window = NULL;
     bool isRunning = true;
+    Game* game;
     
 
     SDL_Surface* screenSurface = NULL;
@@ -24,7 +24,9 @@ int main(int argc, char *argv[])
     }
     else
     {
-        window = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
+        window = SDL_CreateWindow("SharkFatal", SDL_WINDOWPOS_UNDEFINED, 
+                                 SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, 
+                                 SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
         
         if( window == NULL )
         {
@@ -33,14 +35,16 @@ int main(int argc, char *argv[])
         }
     }
 
+    game = newGame(SCREEN_WIDTH,SCREEN_HEIGHT,NULL,NULL);
+
     while(isRunning)
     {
-        
+
     }
 
 
-
-
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 	
 	return 0;
 }

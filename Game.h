@@ -6,16 +6,17 @@
 
 typedef struct 
 {
-	SparseArray field;
+	SparseArray* field;
 	unsigned time;
 	unsigned round;	
-	SDL_Surface* background;
-	SDL_Surface* font;
+	const SDL_Surface* background;
+	const SDL_Surface* font;
 	SDL_Rect resolution;
+	void(*play)(void*);
 }Game;
 
-Game* newGame(unsigned width, unsigned height, 
-	         const SDL_Surface* _background, const SDL_Surface* font);
+Game* newGame(unsigned _width, unsigned _height, 
+	         const SDL_Surface* _background, const SDL_Surface* _font);
 
 
 

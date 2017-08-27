@@ -13,6 +13,8 @@ typedef struct
 	}Dimension;
 }SparseArray;
 
+SparseArray* newSparceArray(int _row, int _column);
+
 
 
 #endif
