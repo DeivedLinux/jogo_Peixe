@@ -7,6 +7,7 @@ and may not be redistributed without written permission.*/
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+#include <math.h>
 #include "Agent.h"
 
 #define WIDTH 64
@@ -34,8 +35,8 @@ int amountSharks = 0;
 int amountFishs = 0;
 
 Board board;
-Shark sharks[10];
-Fish fishes[10];
+Shark sharks[100];
+Fish fishes[100];
 
 int i = 0, j = 0;
 
@@ -122,77 +123,183 @@ int main( int argc, char* args[] )
 
 void update(){
 	
+	//Movimentação shark
 	for(i = 0; i < amountSharks; i++){
+
+		if(sharks[i].state == SHARK_IDLE){
 		
-		int nextInX[4] = { sharks[i].obj.x - 1, sharks[i].obj.x, sharks[i].obj.x + 1, sharks[i].obj.x };
-		int nextInY[4] = { sharks[i].obj.y, sharks[i].obj.y - 1, sharks[i].obj.y, sharks[i].obj.y + 1 };
+			int nextInX[4] = { sharks[i].obj.x - 1, sharks[i].obj.x, sharks[i].obj.x + 1, sharks[i].obj.x };
+			int nextInY[4] = { sharks[i].obj.y, sharks[i].obj.y - 1, sharks[i].obj.y, sharks[i].obj.y + 1 };
 
-		int myNextX;
-		int myNextY;
-		int emptyNext = 1;
-		do{
-			myNextX = nextInX[rand() % 4];
-			myNextY = nextInY[rand() % 4];
-			emptyNext = 1;
+			int myNextX;
+			int myNextY;
+			int emptyNext = 1;
+			do{
+				myNextX = nextInX[rand() % 4];
+				myNextY = nextInY[rand() % 4];
+				emptyNext = 1;
 
-			if(myNextX < 0 || myNextX >= board.width || myNextY < 0 || myNextY >= board.height){
-				emptyNext = 0;
-				continue;
-			}
-
-			for(j = 0; j < amountSharks; j++){
-				//Nao estou conferindo comigo msm
-				if(i != j){
-					if(myNextX == sharks[j].obj.x && myNextY == sharks[j].obj.y)
-						emptyNext = 0;
-				}
-			}
-
-			for(j = 0; j < amountFishs; j++){
-				if(myNextX == fishes[j].obj.x && myNextY == fishes[j].obj.y)
+				if(myNextX < 0 || myNextX >= board.width || myNextY < 0 || myNextY >= board.height){
 					emptyNext = 0;
-			}
+					continue;
+				}
 
-		} while(!emptyNext);
+				for(j = 0; j < amountSharks; j++){
+					//Nao estou conferindo comigo msm
+					if(i != j){
+						if(myNextX == sharks[j].obj.x && myNextY == sharks[j].obj.y)
+							emptyNext = 0;
+					}
+				}
 
-		sharks[i].obj.x = myNextX;
-		sharks[i].obj.y = myNextY;
-	}
-
-	for(i = 0; i < amountFishs; i++){
-		int nextInX[4] = { fishes[i].obj.x - 1, fishes[i].obj.x, fishes[i].obj.x + 1, fishes[i].obj.x };
-		int nextInY[4] = { fishes[i].obj.y, fishes[i].obj.y - 1, fishes[i].obj.y, fishes[i].obj.y + 1 };
-
-		int myNextX;
-		int myNextY;
-		int emptyNext = 1;
-		do{
-			myNextX = nextInX[rand() % 4];
-			myNextY = nextInY[rand() % 4];
-			emptyNext = 1;
-
-			if(myNextX < 0 || myNextX >= board.width || myNextY < 0 || myNextY >= board.height){
-				emptyNext = 0;
-				continue;
-			}
-
-			for(j = 0; j < amountFishs; j++){
-				//Nao estou conferindo comigo msm
-				if(i != j){
+				for(j = 0; j < amountFishs; j++){
 					if(myNextX == fishes[j].obj.x && myNextY == fishes[j].obj.y)
 						emptyNext = 0;
 				}
-			}
 
-			for(j = 0; j < amountSharks; j++){
-				if(myNextX == sharks[j].obj.x && myNextY == sharks[j].obj.y)
+			} while(!emptyNext);
+
+			sharks[i].obj.x = myNextX;
+			sharks[i].obj.y = myNextY;
+		}
+		else if(sharks[i].state == SHARK_CHASE){
+			//Segue o inimigo
+			Fish fish = fishes[sharks[i].indexFish];
+			Shark shark = sharks[i];
+			if(fish.obj.x > shark.obj.x){
+				sharks[i].obj.x += 1;
+			}
+			else if(fish.obj.x < shark.obj.x){
+				sharks[i].obj.x += -1;
+			}
+			else{
+				if(fish.obj.y > shark.obj.y){
+					sharks[i].obj.y += 1;
+				}
+				if(fish.obj.y < shark.obj.y){
+					sharks[i].obj.y += -1;
+				}
+			}
+		}
+		/*else if(sharks[i].state == SHARK_ATTACK){
+			if(sharks[i].indexFish != -1){
+				fishes[sharks[i].indexFish] = fishes[amountFishs - 1];
+				amountFishs--;
+			}
+			sharks[i].indexFish = -1;
+			sharks[i].state = SHARK_IDLE;
+		}*/
+
+
+
+
+		//Se não estiver seguindo nenhum peixe ele vai ver se tem algum
+		if(sharks[i].indexFish == -1){
+			int betterDistance = 99;
+			for(j = 0; j < amountFishs; j++){
+				int distance = abs(sharks[i].obj.x - fishes[j].obj.x) + abs(sharks[i].obj.y - fishes[j].obj.y);
+				if(distance <= sharks[i].captureRange && distance < betterDistance){
+					sharks[i].indexFish = j;
+					sharks[i].state = SHARK_CHASE;
+					betterDistance = distance;
+				}
+			}
+		}
+		else{
+			int distance = abs(sharks[i].obj.x - fishes[sharks[i].indexFish].obj.x) + 
+							abs(sharks[i].obj.y - fishes[sharks[i].indexFish].obj.y);
+
+			if(distance <= 1){
+				sharks[i].state = SHARK_ATTACK;
+				if(sharks[i].indexFish != -1){
+					fishes[sharks[i].indexFish] = fishes[amountFishs - 1];
+					amountFishs--;
+				}
+			sharks[i].indexFish = -1;
+			sharks[i].state = SHARK_IDLE;
+			} 
+		}
+	}
+
+	//movimentação peixe
+	for(i = 0; i < amountFishs; i++){
+
+		Fish fish = fishes[i];
+		if(fish.state == FISH_IDLE){
+			int nextInX[4] = { fishes[i].obj.x - 1, fishes[i].obj.x, fishes[i].obj.x + 1, fishes[i].obj.x };
+			int nextInY[4] = { fishes[i].obj.y, fishes[i].obj.y - 1, fishes[i].obj.y, fishes[i].obj.y + 1 };
+
+			int myNextX;
+			int myNextY;
+			int emptyNext = 1;
+			do{
+				myNextX = nextInX[rand() % 4];
+				myNextY = nextInY[rand() % 4];
+				emptyNext = 1;
+
+				if(myNextX < 0 || myNextX >= board.width || myNextY < 0 || myNextY >= board.height){
 					emptyNext = 0;
-			}
-			
-		} while(!emptyNext);
+					continue;
+				}
 
-		fishes[i].obj.x = myNextX;
-		fishes[i].obj.y = myNextY;
+				for(j = 0; j < amountFishs; j++){
+					//Nao estou conferindo comigo msm
+					if(i != j){
+						if(myNextX == fishes[j].obj.x && myNextY == fishes[j].obj.y)
+							emptyNext = 0;
+					}
+				}
+
+				for(j = 0; j < amountSharks; j++){
+					if(myNextX == sharks[j].obj.x && myNextY == sharks[j].obj.y)
+						emptyNext = 0;
+				}
+				
+			} while(!emptyNext);
+
+			fishes[i].obj.x = myNextX;
+			fishes[i].obj.y = myNextY;
+		}
+		else if(fish.state == FISH_RUNNING){
+
+			if(fish.indexShark != -1){
+
+				Shark shark = sharks[fish.indexShark];
+
+				if(fish.obj.x > shark.obj.x && fish.obj.x < board.width - 1){
+					fishes[i].obj.x += 1;
+				}
+				else if(fish.obj.x < shark.obj.x && fish.obj.x > 0){
+					fishes[i].obj.x += -1;
+				}
+				else{
+					if(fish.obj.y > shark.obj.y && fish.obj.y < board.height - 1){
+						fishes[i].obj.y += 1;
+					}
+					if(fish.obj.y < shark.obj.y && fish.obj.y > 0){
+						fishes[i].obj.y += -1;
+					}
+				}	
+			}
+
+			fishes[i].state = FISH_IDLE;
+			fishes[i].indexShark = -1;
+		}
+
+		int betterDistance = 99;
+		for(j = 0; j < amountSharks; j++){
+			
+			Shark shark = sharks[j];
+
+			int distance = abs(shark.obj.x - fish.obj.x) + abs(shark.obj.y - fish.obj.y);
+			if(distance <= fish.perceptionRange && distance < betterDistance){
+				betterDistance = distance;
+				fishes[i].indexShark = j;
+				fishes[i].state = FISH_RUNNING;
+			}
+
+		}
+
 	}
 }
 
