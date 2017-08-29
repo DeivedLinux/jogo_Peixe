@@ -37,6 +37,7 @@ typedef struct{
 	int perceptionRange;
 	Object obj;
 	int indexShark;
+	int timeAfterReproduction;
 } Fish;
 
 typedef enum 

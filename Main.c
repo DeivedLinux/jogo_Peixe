@@ -52,6 +52,8 @@ void draw();
 
 void update();
 
+int distance(Object a, Object b);
+
 int main( int argc, char* args[] )
 {
 	//The window we'll be rendering to
@@ -233,8 +235,9 @@ void update(){
 			int myNextY;
 			int emptyNext = 1;
 			do{
-				myNextX = nextInX[rand() % 4];
-				myNextY = nextInY[rand() % 4];
+				int sorted = rand() % 4;
+				myNextX = nextInX[sorted];
+				myNextY = nextInY[sorted];
 				emptyNext = 1;
 
 				if(myNextX < 0 || myNextX >= board.width || myNextY < 0 || myNextY >= board.height){
@@ -297,10 +300,60 @@ void update(){
 				fishes[i].indexShark = j;
 				fishes[i].state = FISH_RUNNING;
 			}
-
 		}
 
+		for(j = 0; j < amountFishs; j++){
+
+			Fish fish = fishes[j];
+			if(fishes[i].timeAfterReproduction < 3 || fish.timeAfterReproduction < 3){
+				continue;
+			}
+
+			if(j != i){
+				int distanceA = distance(fish.obj, fishes[i].obj);
+
+				if(distanceA <= 1){
+					printf("distancia sendo menor que 1\n");
+					//int nextInX[8] = { -1, -1, -1, 0,  0, 1, 1,  1};
+					//int nextInY[8] = {  1,  0, -1, 1, -1, 1, 0, -1};
+					
+					int nextInX[4] = { -1, -1, 1, 1,};
+					int nextInY[4] = {  1, -1, 1, -1};
+					
+					int sorted = rand() % 4;
+					int posX = fishes[i].obj.x + nextInX[sorted];
+					int posY = fishes[i].obj.y + nextInY[sorted];
+					while(abs(posX - fish.obj.x) + abs(posY - fish.obj.y) < 2){
+						sorted = rand() % 4;
+						posX = fishes[i].obj.x + nextInX[sorted];
+						posY = fishes[i].obj.y + nextInY[sorted];
+					}
+
+					fish.timeAfterReproduction = 0;
+					fishes[i].timeAfterReproduction = 0;
+
+					fishes[amountFishs].obj.x = posX;
+					fishes[amountFishs].obj.y = posY;
+					fishes[amountFishs].obj.life = 10;
+					fishes[amountFishs].obj.sprite = fish_sprite;
+
+					fishes[amountFishs].state = FISH_IDLE;
+					fishes[amountFishs].perceptionRange = 5;
+					fishes[amountFishs].indexShark = -1;
+					fishes[amountFishs].timeAfterReproduction = 0;
+
+					amountFishs++;
+				}
+			}
+		}
+
+		fishes[i].timeAfterReproduction++;
 	}
+}
+
+int distance(Object a, Object b){
+
+	return abs(a.x - b.x) + abs(a.y - b.y);
 }
 
 void draw(){
@@ -368,6 +421,7 @@ void createGame(){
 		fishes[i].obj.y = rand() % 64;
 		fishes[i].obj.life = 10;
 		fishes[i].obj.sprite = fish_sprite;
+		fishes[i].timeAfterReproduction = 0;
 
 		fishes[i].state = FISH_IDLE;
 		fishes[i].perceptionRange = 5;
