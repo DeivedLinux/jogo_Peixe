@@ -43,3 +43,31 @@ int insere_lista_final(Lista* li,void* element)
 
 	return 1;
 }
+
+
+int remove_lista_fish(Lista* li, Object obj){
+
+	Elem* aux = *li;
+	Elem* ant = NULL;
+	while(aux != NULL){
+
+		Fish* fish = getFish(aux);
+		if(fish->obj.x == obj.x && fish->obj.y == obj.y){
+			if(ant == NULL){
+				*li = aux->prox;
+				free(aux);
+				return 1;
+			}
+			else{
+				ant->prox = aux->prox;
+				free(aux);
+				return 1;
+			}
+		}
+
+		ant = aux;
+		aux = aux->prox;
+	}
+
+	return 1;
+}

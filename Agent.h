@@ -25,20 +25,22 @@ typedef struct
 	SDL_Surface* sprite;
 } Object;
 
-typedef struct{
-	Object obj;
-	StateShark state;
-	int captureRange;
-	int indexFish;
-} Shark;
+typedef struct shark Shark;
 
 typedef struct{
 	Object obj;
 	StateFish state;
 	int perceptionRange;
-	int indexShark;
+	Shark* predator;
 	int timeLapseReproduction;
 } Fish;
+
+struct shark{
+	Object obj;
+	StateShark state;
+	int captureRange;
+	Fish* prey;
+};
 
 typedef enum 
 {
