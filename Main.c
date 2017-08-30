@@ -9,20 +9,35 @@ and may not be redistributed without written permission.*/
 #include <stdlib.h>
 #include <math.h>
 #include "Agent.h"
+#include "Lista.h"
 
-#define WIDTH 64
-#define HEIGHT 64
+#define BOARD_WIDTH 64
+#define BOARD_HEIGHT 64
 
 //Screen dimension constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 640;
 
+#define getShark(Obj) ((Shark*)Obj->dados)
+#define getFish(Obj) ((Fish*)Obj->dados)
+
 typedef struct{
 	int width;
 	int height;
 	SDL_Surface** sprite;
-
+	int** spaces;
 } Board;
+
+typedef struct{
+	int life;
+
+	int amountSharks;
+	int captureRange;
+	
+	int amountFishes;
+	int perceptionRange;
+	int timeLapseReproduction;
+} Settings;
 
 SDL_Window* window = NULL;
 SDL_Surface* screenSurface = NULL;
@@ -31,33 +46,37 @@ SDL_Surface* square_sprite = NULL;
 SDL_Surface* fish_sprite = NULL;
 SDL_Surface* shark_sprite = NULL;
 
-int amountSharks = 0;
-int amountFishs = 0;
-
-Board board;
-Shark sharks[100];
-Fish fishes[100];
+Board* board;
+Settings* settings;
+Lista* li_shark;
+Lista* li_fish;
 
 int i = 0, j = 0;
+const int mov_possib[4][2] = { {-1, 0}, {0, 1}, {1, 0}, {0, -1} };
 
-SDL_Surface* loadSurface(char path[]);
 
 void close();
-
 int init();
-
 int loadSprites();
+SDL_Surface* loadSurface(char path[]);
 
 void draw();
-
 void update();
 
 int distance(Object a, Object b);
+int isValidPos(int x, int y);
+Object moveObject(Object obj, int newX, int newY);
+
+Shark* create_shark();
+Fish* create_fish();
+Board* create_board();
+Settings* create_settings();
+
+void fish_movement();
+void shark_movement();
 
 int main( int argc, char* args[] )
-{
-	//The window we'll be rendering to
-	
+{	
 	if(!init()){
 		printf("Failed to initialize!\n");
 		return 0;
@@ -68,10 +87,23 @@ int main( int argc, char* args[] )
 		return 0;
 	}
 
+	//Inicializando função de random
+	srand(time(NULL)); 
 
-	srand(time(NULL));   // should only be called once
-
+	//Inicializando variáveis do jogo
 	createGame();
+
+	li_shark = cria_lista();
+	for(i = 0; i < settings->amountSharks; i++){
+		Shark* shark = create_shark();
+		insere_lista_final(li_shark, shark);
+	}
+
+	li_fish = cria_lista();
+	for(i = 0; i < settings->amountFishes; i++){
+		Fish* fish = create_fish();
+		insere_lista_final(li_fish, fish);
+	}
 
 	//Main loop flag
 	int quit = 0;
@@ -82,13 +114,13 @@ int main( int argc, char* args[] )
 	int nextStep = 1; //true for the frist draw
 
 	//While application is running
-	while( !quit )
+	while(!quit)
 	{
 
 		//Handle events on queue
 		while( SDL_PollEvent( &e ) != 0 )
 		{
-			if( e.type == SDL_Quit )
+			if(e.type == SDL_Quit)
 			{
 				quit = 1;
 			}
@@ -96,12 +128,12 @@ int main( int argc, char* args[] )
 			switch( e.type ){
 					case SDL_KEYDOWN:
 						switch( e.key.keysym.sym ){
-	                    case SDLK_ESCAPE:
-	                        quit = 1;
-	                        break;
-	                    case SDLK_RETURN:
-	                    	nextStep = 1;
-	                    	break;
+		                    case SDLK_ESCAPE:
+		                        quit = 1;
+		                        break;
+		                    case SDLK_RETURN:
+		                    	nextStep = 1;
+		                    	break;
 	                }
 				}     				
 		}
@@ -124,236 +156,8 @@ int main( int argc, char* args[] )
 }
 
 void update(){
-	
-	//Movimentação shark
-	for(i = 0; i < amountSharks; i++){
-
-		if(sharks[i].state == SHARK_IDLE){
-		
-			int nextInX[4] = { sharks[i].obj.x - 1, sharks[i].obj.x, sharks[i].obj.x + 1, sharks[i].obj.x };
-			int nextInY[4] = { sharks[i].obj.y, sharks[i].obj.y - 1, sharks[i].obj.y, sharks[i].obj.y + 1 };
-
-			int myNextX;
-			int myNextY;
-			int emptyNext = 1;
-			do{
-				myNextX = nextInX[rand() % 4];
-				myNextY = nextInY[rand() % 4];
-				emptyNext = 1;
-
-				if(myNextX < 0 || myNextX >= board.width || myNextY < 0 || myNextY >= board.height){
-					emptyNext = 0;
-					continue;
-				}
-
-				for(j = 0; j < amountSharks; j++){
-					//Nao estou conferindo comigo msm
-					if(i != j){
-						if(myNextX == sharks[j].obj.x && myNextY == sharks[j].obj.y)
-							emptyNext = 0;
-					}
-				}
-
-				for(j = 0; j < amountFishs; j++){
-					if(myNextX == fishes[j].obj.x && myNextY == fishes[j].obj.y)
-						emptyNext = 0;
-				}
-
-			} while(!emptyNext);
-
-			sharks[i].obj.x = myNextX;
-			sharks[i].obj.y = myNextY;
-		}
-		else if(sharks[i].state == SHARK_CHASE){
-			//Segue o inimigo
-			Fish fish = fishes[sharks[i].indexFish];
-			Shark shark = sharks[i];
-			if(fish.obj.x > shark.obj.x){
-				sharks[i].obj.x += 1;
-			}
-			else if(fish.obj.x < shark.obj.x){
-				sharks[i].obj.x += -1;
-			}
-			else{
-				if(fish.obj.y > shark.obj.y){
-					sharks[i].obj.y += 1;
-				}
-				if(fish.obj.y < shark.obj.y){
-					sharks[i].obj.y += -1;
-				}
-			}
-		}
-		/*else if(sharks[i].state == SHARK_ATTACK){
-			if(sharks[i].indexFish != -1){
-				fishes[sharks[i].indexFish] = fishes[amountFishs - 1];
-				amountFishs--;
-			}
-			sharks[i].indexFish = -1;
-			sharks[i].state = SHARK_IDLE;
-		}*/
-
-
-
-
-		//Se não estiver seguindo nenhum peixe ele vai ver se tem algum
-		if(sharks[i].indexFish == -1){
-			int betterDistance = 99;
-			for(j = 0; j < amountFishs; j++){
-				int distance = abs(sharks[i].obj.x - fishes[j].obj.x) + abs(sharks[i].obj.y - fishes[j].obj.y);
-				if(distance <= sharks[i].captureRange && distance < betterDistance){
-					sharks[i].indexFish = j;
-					sharks[i].state = SHARK_CHASE;
-					betterDistance = distance;
-				}
-			}
-		}
-		else{
-			int distance = abs(sharks[i].obj.x - fishes[sharks[i].indexFish].obj.x) + 
-							abs(sharks[i].obj.y - fishes[sharks[i].indexFish].obj.y);
-
-			if(distance <= 1){
-				sharks[i].state = SHARK_ATTACK;
-				if(sharks[i].indexFish != -1){
-					fishes[sharks[i].indexFish] = fishes[amountFishs - 1];
-					amountFishs--;
-				}
-			sharks[i].indexFish = -1;
-			sharks[i].state = SHARK_IDLE;
-			} 
-		}
-	}
-
-	//movimentação peixe
-	for(i = 0; i < amountFishs; i++){
-
-		Fish fish = fishes[i];
-		if(fish.state == FISH_IDLE){
-			int nextInX[4] = { fishes[i].obj.x - 1, fishes[i].obj.x, fishes[i].obj.x + 1, fishes[i].obj.x };
-			int nextInY[4] = { fishes[i].obj.y, fishes[i].obj.y - 1, fishes[i].obj.y, fishes[i].obj.y + 1 };
-
-			int myNextX;
-			int myNextY;
-			int emptyNext = 1;
-			do{
-				int sorted = rand() % 4;
-				myNextX = nextInX[sorted];
-				myNextY = nextInY[sorted];
-				emptyNext = 1;
-
-				if(myNextX < 0 || myNextX >= board.width || myNextY < 0 || myNextY >= board.height){
-					emptyNext = 0;
-					continue;
-				}
-
-				for(j = 0; j < amountFishs; j++){
-					//Nao estou conferindo comigo msm
-					if(i != j){
-						if(myNextX == fishes[j].obj.x && myNextY == fishes[j].obj.y)
-							emptyNext = 0;
-					}
-				}
-
-				for(j = 0; j < amountSharks; j++){
-					if(myNextX == sharks[j].obj.x && myNextY == sharks[j].obj.y)
-						emptyNext = 0;
-				}
-				
-			} while(!emptyNext);
-
-			fishes[i].obj.x = myNextX;
-			fishes[i].obj.y = myNextY;
-		}
-		else if(fish.state == FISH_RUNNING){
-
-			if(fish.indexShark != -1){
-
-				Shark shark = sharks[fish.indexShark];
-
-				if(fish.obj.x > shark.obj.x && fish.obj.x < board.width - 1){
-					fishes[i].obj.x += 1;
-				}
-				else if(fish.obj.x < shark.obj.x && fish.obj.x > 0){
-					fishes[i].obj.x += -1;
-				}
-				else{
-					if(fish.obj.y > shark.obj.y && fish.obj.y < board.height - 1){
-						fishes[i].obj.y += 1;
-					}
-					if(fish.obj.y < shark.obj.y && fish.obj.y > 0){
-						fishes[i].obj.y += -1;
-					}
-				}	
-			}
-
-			fishes[i].state = FISH_IDLE;
-			fishes[i].indexShark = -1;
-		}
-
-		int betterDistance = 99;
-		for(j = 0; j < amountSharks; j++){
-			
-			Shark shark = sharks[j];
-
-			int distance = abs(shark.obj.x - fish.obj.x) + abs(shark.obj.y - fish.obj.y);
-			if(distance <= fish.perceptionRange && distance < betterDistance){
-				betterDistance = distance;
-				fishes[i].indexShark = j;
-				fishes[i].state = FISH_RUNNING;
-			}
-		}
-
-		for(j = 0; j < amountFishs; j++){
-
-			Fish fish = fishes[j];
-			if(fishes[i].timeAfterReproduction < 3 || fish.timeAfterReproduction < 3){
-				continue;
-			}
-
-			if(j != i){
-				int distanceA = distance(fish.obj, fishes[i].obj);
-
-				if(distanceA <= 1){
-					printf("distancia sendo menor que 1\n");
-					//int nextInX[8] = { -1, -1, -1, 0,  0, 1, 1,  1};
-					//int nextInY[8] = {  1,  0, -1, 1, -1, 1, 0, -1};
-					
-					int nextInX[4] = { -1, -1, 1, 1,};
-					int nextInY[4] = {  1, -1, 1, -1};
-					
-					int sorted = rand() % 4;
-					int posX = fishes[i].obj.x + nextInX[sorted];
-					int posY = fishes[i].obj.y + nextInY[sorted];
-					while(abs(posX - fish.obj.x) + abs(posY - fish.obj.y) < 2){
-						sorted = rand() % 4;
-						posX = fishes[i].obj.x + nextInX[sorted];
-						posY = fishes[i].obj.y + nextInY[sorted];
-					}
-
-					fish.timeAfterReproduction = 0;
-					fishes[i].timeAfterReproduction = 0;
-
-					fishes[amountFishs].obj.x = posX;
-					fishes[amountFishs].obj.y = posY;
-					fishes[amountFishs].obj.life = 10;
-					fishes[amountFishs].obj.sprite = fish_sprite;
-
-					fishes[amountFishs].state = FISH_IDLE;
-					fishes[amountFishs].perceptionRange = 5;
-					fishes[amountFishs].indexShark = -1;
-					fishes[amountFishs].timeAfterReproduction = 0;
-
-					amountFishs++;
-				}
-			}
-		}
-
-		fishes[i].timeAfterReproduction++;
-	}
-}
-
-int distance(Object a, Object b){
-
-	return abs(a.x - b.x) + abs(a.y - b.y);
+	shark_movement();
+	fish_movement();
 }
 
 void draw(){
@@ -361,77 +165,215 @@ void draw(){
 	SDL_Rect rect;
 	rect.x = 0;
 	rect.y = 0;
-	rect.w = SCREEN_WIDTH / board.width;
-	rect.h = SCREEN_HEIGHT / board.height;
+	rect.w = SCREEN_WIDTH / board->width;
+	rect.h = SCREEN_HEIGHT / board->height;
 
-	for(i = 0; i < board.width; i++){
-		for(j = 0; j < board.height; j++){
+
+	for(i = 0; i < board->width; i++){
+		for(j = 0; j < board->height; j++){
 			rect.x = i * rect.w;
 			rect.y = j * rect.h;
-
-			SDL_BlitSurface( board.sprite, NULL, screenSurface, &rect );
+			SDL_BlitSurface( board->sprite, NULL, screenSurface, &rect );
 		}
 	}
 
-	for(i = 0; i < amountSharks; i++){
-		rect.x = sharks[i].obj.x * rect.w;;
-		rect.y = sharks[i].obj.y * rect.h;
+	Elem* li = *li_shark;
+	while(li != NULL){
+		rect.x = getShark(li)->obj.x * rect.w;
+		rect.y = getShark(li)->obj.y * rect.h;
 
-		SDL_BlitSurface( sharks[i].obj.sprite, NULL, screenSurface, &rect );
+		SDL_BlitSurface( getShark(li)->obj.sprite, NULL, screenSurface, &rect);
+		li = li->prox;
 	}
 
-	for(i = 0; i < amountFishs; i++){
-		rect.x = fishes[i].obj.x * rect.w;;
-		rect.y = fishes[i].obj.y * rect.h;
+	li = *li_fish;
+	while(li != NULL){
+		rect.x = getFish(li)->obj.x * rect.w;
+		rect.y = getFish(li)->obj.y * rect.h;
 
-		SDL_BlitSurface( fishes[i].obj.sprite, NULL, screenSurface, &rect );
+		SDL_BlitSurface( getFish(li)->obj.sprite, NULL, screenSurface, &rect);
+		li = li->prox;
 	}
 
-	SDL_UpdateWindowSurface( window );
+	SDL_UpdateWindowSurface(window);
 }
+
+void shark_movement(){
+
+	Elem *li = *li_shark;
+	while(li != NULL){
+
+		if(getShark(li)->state == SHARK_IDLE){
+
+			int nextX;
+			int nextY;
+			do{
+				int sorted = rand() % 4;
+				nextX = getShark(li)->obj.x + mov_possib[sorted][0];
+				nextY = getShark(li)->obj.y + mov_possib[sorted][1];
+			} while(!isValidPos(nextX, nextY));
+
+			getShark(li)->obj = moveObject(getShark(li)->obj, nextX, nextY);
+
+		}
+
+		li = li->prox;
+	}
+}
+
+void fish_movement(){
+
+	Elem *li = *li_fish;
+	while(li != NULL){
+
+		if(getFish(li)->state == FISH_IDLE){
+
+			int nextX;
+			int nextY;
+			do{
+				int sorted = rand() % 4;
+				nextX = getFish(li)->obj.x + mov_possib[sorted][0];
+				nextY = getFish(li)->obj.y + mov_possib[sorted][1];
+			} while(!isValidPos(nextX, nextY));
+
+			getFish(li)->obj = moveObject(getFish(li)->obj, nextX, nextY);
+
+		}
+
+		li = li->prox;
+	}
+}
+
+Object moveObject(Object obj, int newX, int newY){
+
+	board->spaces[obj.x][obj.y] = 0;
+	obj.x = newX;
+	obj.y = newY;
+	board->spaces[obj.x][obj.y] = 1;
+
+	return obj;
+}
+
+int distance(Object a, Object b){
+
+	return abs(a.x - b.x) + abs(a.y - b.y);
+}
+
+int isValidPos(int x, int y){
+
+	if(x < 0 || x >= board->width || y < 0 || y >= board->height){
+		return 0;
+	}
+
+	if(board->spaces[x][y] == 1){
+		return 0;
+	}
+
+	return 1;
+}
+
+
 
 void createGame(){
 
+	board = create_board();
+	
+	settings = create_settings();
+
 	//FAZER SÓ OS TUBARÕES
 	printf("Insira a quantidade de tubaroes: ");
-	scanf("%i", &amountSharks);
+	scanf("%i", &settings->amountSharks);
 
 	printf("Insira a quantidade de peixes: ");
-	scanf("%i", &amountFishs);
+	scanf("%i", &settings->amountFishes);
 
-	board.width = WIDTH;
-	board.height = HEIGHT;
-	board.sprite = square_sprite;
-
-	for(i = 0; i < amountSharks; i++){
-		
-		sharks[i].obj.x = rand() % 64;
-		sharks[i].obj.y = rand() % 64;
-		sharks[i].obj.life = 10;
-		sharks[i].obj.sprite = shark_sprite;
-
-		sharks[i].state = SHARK_IDLE;
-		sharks[i].captureRange = 10;
-		sharks[i].indexFish = -1;
-	}
-
-	for(i = 0; i < amountFishs; i++){
-		
-		fishes[i].obj.x = rand() % 64;
-		fishes[i].obj.y = rand() % 64;
-		fishes[i].obj.life = 10;
-		fishes[i].obj.sprite = fish_sprite;
-		fishes[i].timeAfterReproduction = 0;
-
-		fishes[i].state = FISH_IDLE;
-		fishes[i].perceptionRange = 5;
-		fishes[i].indexShark = -1;
-	}
 
 }
 
-SDL_Surface* loadSurface(char path[])
-{
+Board* create_board(){
+	Board* board;
+	board = (Board*)malloc(sizeof(Board));
+
+	board->width = BOARD_WIDTH;
+	board->height = BOARD_HEIGHT;
+	board->sprite = square_sprite;
+
+	board->spaces = (int**)malloc(board->width * sizeof(int*));
+	for(i = 0; i < board->width; i++){
+		board->spaces[i] = (int*)malloc(board->height * sizeof(int));
+		for(j = 0; j < board->height; j++){
+			board->spaces[i][j] = 0;
+		}		
+	}
+
+	return board;
+}
+
+Settings* create_settings(){
+	Settings* settings;
+	settings = (Settings*)malloc(sizeof(Settings));
+
+	//default settings
+	settings->life = 50;
+
+	settings->amountSharks = 10;
+	settings->captureRange = 10;
+
+	settings->amountFishes = 10;
+	settings->perceptionRange = 5;
+	settings->timeLapseReproduction = 5;
+
+	return settings;
+}
+
+Object create_object_random_pos(){
+	Object obj;
+	obj.x = -1;
+	obj.y = -1;
+
+	do{
+		obj.x = rand() % board->width;
+		obj.y = rand() % board->height; 
+	}
+	while(!isValidPos(obj.x, obj.y));
+
+	obj = moveObject(obj, obj.x, obj.y);
+
+	return obj;
+}
+
+Shark* create_shark(){
+	Shark* shark;
+	shark = (Shark*)malloc(sizeof(Shark));
+
+	shark->obj = create_object_random_pos();
+	shark->obj.life = settings->life; 
+	shark->obj.sprite = shark_sprite;
+
+	shark->state = SHARK_IDLE;
+	shark->captureRange = settings->captureRange;
+	shark->indexFish = -1; 
+
+	return shark;
+}
+
+Fish* create_fish(){
+	Fish* fish;
+	fish = (Fish*)malloc(sizeof(Fish));
+
+	fish->obj = create_object_random_pos();
+	fish->obj.life = settings->life;
+	fish->obj.sprite = fish_sprite;
+
+	fish->state = FISH_IDLE;
+	fish->perceptionRange = settings->perceptionRange;
+	fish->indexShark = -1;
+	fish->timeLapseReproduction = settings->timeLapseReproduction;
+
+	return fish;
+}
+
+SDL_Surface* loadSurface(char path[]){
     //The final optimized image
     SDL_Surface* optimizedSurface = NULL;
 
@@ -457,8 +399,7 @@ SDL_Surface* loadSurface(char path[])
     return optimizedSurface;
 }
 
-void close()
-{
+void close(){
 	//Free loaded image
 	SDL_FreeSurface( square_sprite );
 	SDL_FreeSurface( fish_sprite );
@@ -466,6 +407,8 @@ void close()
 	square_sprite = NULL;
 	fish_sprite = NULL;
 	shark_sprite = NULL;
+	libera_lista(li_shark);
+	libera_lista(li_fish);
 
 	//Destroy window
 	SDL_DestroyWindow( window );

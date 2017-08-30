@@ -26,18 +26,18 @@ typedef struct
 } Object;
 
 typedef struct{
+	Object obj;
 	StateShark state;
 	int captureRange;
-	Object obj;
 	int indexFish;
 } Shark;
 
 typedef struct{
+	Object obj;
 	StateFish state;
 	int perceptionRange;
-	Object obj;
 	int indexShark;
-	int timeAfterReproduction;
+	int timeLapseReproduction;
 } Fish;
 
 typedef enum 
