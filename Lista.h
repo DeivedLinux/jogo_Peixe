@@ -23,7 +23,7 @@ void libera_lista(Lista* li);
 
 int insere_lista_final(Lista* li,void* element);
 
-int remove_lista(Lista* li, Object obj);
+int remove_lista_fish(Lista* li, Object obj);
 
 
 #endif
