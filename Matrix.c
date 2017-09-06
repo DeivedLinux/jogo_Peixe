@@ -9,7 +9,13 @@ SparseArray* newSparceArray(int _row, int _column)
 
 	array->Dimension.row = _row;
 	array->Dimension.column = _column;
-	array->list = newArrayList();
+	array->matrix = newArrayList();
 
 	return array;
+}
+void destroySparseArray(SparseArray* sparseArray)
+{
+	sparseArray->matrix->destroyList(&sparseArray->matrix->list);
+	destroyArrayList(sparseArray->matrix);
+	free(sparseArray);
 }

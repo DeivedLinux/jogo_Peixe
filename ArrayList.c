@@ -82,3 +82,9 @@ static unsigned getLength(List* list)
 
 	return i;
 }
+
+void destroyArrayList(ArrayList* arrayList)
+{
+	arrayList->destroyList(&arrayList->list);
+	free(arrayList);
+}

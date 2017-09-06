@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "Game.h"
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <stdbool.h>
 
 static const unsigned SCREEN_WIDTH = 480;
@@ -14,8 +15,9 @@ int main(int argc, char *argv[])
     bool isRunning = true;
     SDL_Surface* gScreen = NULL;
     Game* game = NULL;
+    SDL_Surface* fishImg = NULL;
+    SDL_Rect rect;
     
-
     if(SDL_Init( SDL_INIT_VIDEO ) < 0 )
     {
         printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
@@ -37,8 +39,10 @@ int main(int argc, char *argv[])
             screenSurface = SDL_GetWindowSurface(window);
         }
     }
+    IMG_Init(IMG_INIT_PNG);
 
     gScreen = SDL_LoadBMP("Fundo do Mar.bmp");
+
     game = newGame(SCREEN_WIDTH,SCREEN_HEIGHT,gScreen,NULL);
 
     GameInit(game);
@@ -49,8 +53,9 @@ int main(int argc, char *argv[])
          SDL_UpdateWindowSurface(window);
          SDL_Delay(10);
     }
-
-
+    
+    destroyGame(game);
+    SDL_FreeSurface(gScreen);
     SDL_DestroyWindow(window);
     SDL_Quit();
 	

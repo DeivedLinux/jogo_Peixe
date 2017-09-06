@@ -34,5 +34,6 @@ typedef struct
 }__attribute__((packed))ArrayList;
 
 ArrayList* newArrayList();
+void destroyArrayList(ArrayList* arrayList);
 
 #endif /* ARRAYLIST_H_ */

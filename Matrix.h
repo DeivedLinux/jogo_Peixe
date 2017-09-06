@@ -5,7 +5,7 @@
 
 typedef struct 
 {
-	ArrayList* list;
+	ArrayList* matrix;
 	struct 
 	{
 		int row;
@@ -14,7 +14,7 @@ typedef struct
 }SparseArray;
 
 SparseArray* newSparceArray(int _row, int _column);
-
+void destroySparseArray(SparseArray* sparseArray);
 
 
 #endif
