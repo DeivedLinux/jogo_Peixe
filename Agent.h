@@ -26,6 +26,7 @@ typedef struct
 } Object;
 
 typedef struct shark Shark;
+typedef struct trail Trail;
 
 typedef struct{
 	Object obj;
@@ -40,6 +41,12 @@ struct shark{
 	StateShark state;
 	int captureRange;
 	Fish* prey;
+};
+
+struct trail{
+	Object obj;
+	int dir;
+	int tempo;
 };
 
 typedef enum 
