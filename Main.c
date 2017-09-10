@@ -8,6 +8,7 @@ and may not be redistributed without written permission.*/
 #include <time.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 #include "Agent.h"
 #include "Lista.h"
 
@@ -79,9 +80,11 @@ Object moveObject(Object obj, int newX, int newY, int value);
 
 Shark* create_shark();
 Fish* create_fish();
+void create_trail(Object oldObj, Object obj, int diff_x, int diff_y);
 Fish* create_son_fish(Object father1, Object father2);
 Board* create_board();
 Settings* create_settings();
+Trail* get_trail_by_pos(int x, int y);
 
 void fish_movement();
 void shark_movement();
@@ -163,9 +166,10 @@ int main( int argc, char* args[] ){
 		if(firstTimeEver == 0){
 			update();
 		}
-		firstTimeEver = 0;
-		draw();
+		else
+			firstTimeEver = 0;
 
+		draw();
 		SDL_Delay(100);
 
 	}
@@ -178,6 +182,7 @@ int main( int argc, char* args[] ){
 void update(){
 	shark_movement();
 	fish_movement();
+	update_trails();
 
 	/*printf("\n");
 	printf("\n");
@@ -209,7 +214,16 @@ void draw(){
 		}
 	}
 
-	Elem* li = *li_shark;
+	Elem* li = *li_trail;
+	while(li != NULL){
+		rect.x = getFish(li)->obj.x * rect.w;
+		rect.y = getFish(li)->obj.y * rect.h;
+
+		SDL_BlitSurface( getTrail(li)->obj.sprite, NULL, screenSurface, &rect);
+		li = li->prox;
+	}
+
+	li = *li_shark;
 	while(li != NULL){
 		rect.x = getShark(li)->obj.x * rect.w;
 		rect.y = getShark(li)->obj.y * rect.h;
@@ -227,16 +241,35 @@ void draw(){
 		li = li->prox;
 	}
 
-	li = *li_trail;
-	while(li != NULL){
-		rect.x = getFish(li)->obj.x * rect.w;
-		rect.y = getFish(li)->obj.y * rect.h;
+	SDL_UpdateWindowSurface(window);
+}
 
-		SDL_BlitSurface( getTrail(li)->obj.sprite, NULL, screenSurface, &rect);
-		li = li->prox;
+int* get_dir_coordinates(int dir){
+
+	int *coord = (int*)malloc(2 * sizeof(int));
+	coord[0] = 0;
+	coord[1] = -1;
+
+
+	if(dir == 0){
+		coord[0] = 0;
+		coord[1] = -1;
+	}
+	if(dir == 90){
+		coord[0] = 1;
+		coord[1] = 0;
+	}
+	if(dir == 180){
+		coord[0] = 0;
+		coord[1] = 1;
+	}
+	if(dir == 270){
+		coord[0] = -1;
+		coord[1] = 0;
 	}
 
-	SDL_UpdateWindowSurface(window);
+
+	return coord;
 }
 
 void shark_movement(){
@@ -246,7 +279,37 @@ void shark_movement(){
 
 		Shark* shark = getShark(li);
 
-		if(getShark(li)->state == SHARK_IDLE){
+		//Primeiro checa se ele está em algum rastro
+		if(board->spaces[shark->obj.x][shark->obj.y] == trail_value + shark_value){
+			//Pegar rastro
+			Trail* trail = get_trail_by_pos(shark->obj.x, shark->obj.y);
+			int followTrail = rand() % 100 + 1;
+			if(followTrail < trail->strength){
+				//É pra seguir o rastro
+				int* coordenates = get_dir_coordinates(trail->dir);
+				int nextX = shark->obj.x + coordenates[0];
+				int nextY = shark->obj.y + coordenates[1];
+
+				Object oldObj = shark->obj;
+				shark->obj = moveObject(shark->obj, nextX, nextY, shark_value);
+				create_trail(oldObj, shark->obj, coordenates[0], coordenates[1]);
+			}
+			else{
+				//É pra ir para qualquer umas das posições restantes
+				int size = 0;
+				int* poss_index = get_avaibles_mov_pos(shark->obj, &size);
+
+				int sorted = poss_index[rand() % size];
+				int nextX = shark->obj.x + mov_possib[sorted][0];
+				int nextY = shark->obj.y + mov_possib[sorted][1];
+
+				Object oldObj = shark->obj;
+				shark->obj = moveObject(shark->obj, nextX, nextY, shark_value);
+				create_trail(oldObj, shark->obj, mov_possib[sorted][0], mov_possib[sorted][1]);
+			}
+
+		}
+		else if(shark->state == SHARK_IDLE){
 
 			int size = 0;
 			int* poss_index = get_avaibles_mov_pos(shark->obj, &size);
@@ -257,17 +320,11 @@ void shark_movement(){
 					int nextX = shark->obj.x + mov_possib[sorted][0];
 					int nextY = shark->obj.y + mov_possib[sorted][1];
 
-					Trail* trail = (Trail*)malloc(sizeof(Trail));
-					trail->obj.x = shark->obj.x;
-					trail->obj.x = shark->obj.y;
-					trail->tempo = 10;
-					trail->dir = 1;
-					trail->obj.sprite = trail_sprite;
-					insere_lista_final(li_trail, trail);
-
+					Object oldObj = shark->obj;
 					shark->obj = moveObject(shark->obj, nextX, nextY, shark_value);
+					create_trail(oldObj, shark->obj, mov_possib[sorted][0], mov_possib[sorted][1]);
 
-				if(getShark(li)->prey == NULL){
+				if(shark->prey == NULL){
 					int betterDistance = 99;
 					Elem* el_fish = *li_fish;
 					while(el_fish != NULL){
@@ -285,7 +342,7 @@ void shark_movement(){
 				}
 			}
 		}
-		else if(getShark(li)->state == SHARK_CHASE){
+		else if(shark->state == SHARK_CHASE){
 
 			if(shark->prey == NULL){
 				shark->state = SHARK_IDLE;
@@ -311,7 +368,10 @@ void shark_movement(){
 				}
 			}
 
+			//shark->obj = moveObject(shark->obj, nextX, nextY, shark_value);
+			Object oldObj = shark->obj;
 			shark->obj = moveObject(shark->obj, nextX, nextY, shark_value);
+			create_trail(oldObj, shark->obj, nextX - shark->obj.x, nextY - shark->obj.y);
 
 			int d = distance(shark->obj, fish->obj);
 			if(d <= 1){
@@ -423,6 +483,47 @@ void fish_movement(){
 	}
 }
 
+int decay_strength(int tempo){
+
+	//printf("expoente %lf\n", -0.07 * tempo);
+	//long double a = 1 * (pow(FLT_EPSILON, 0.07 * tempo));
+	int a = 50 - pow(tempo, 2);
+	return a;
+}
+
+void update_trails(){
+
+	Elem* li = *li_trail;
+	Elem* ant = NULL;
+	while(li != NULL){
+
+		Trail* trail = getTrail(li);
+		printf("%i %i\n",trail->obj.x, trail->obj.y );
+		trail->strength = decay_strength(trail->tempo);
+		trail->tempo += 1;
+		
+		//remoção
+		if(trail->tempo >= 7){
+
+			board->spaces[trail->obj.x][trail->obj.y] -= trail_value;
+			if(ant != NULL){
+				ant->prox = li->prox;
+			}
+			else{
+				*li_trail = li->prox;
+			}
+
+			Elem* no = li;
+			li = li->prox;
+			free(no);
+		}
+		else{
+			ant = li;
+			li = li->prox;
+		}
+	}
+}
+
 int* get_avaibles_mov_pos(Object obj, int* size){
 
 	*size = 0;
@@ -458,8 +559,11 @@ int* get_avaibles_mov_pos(Object obj, int* size){
 
 Object moveObject(Object obj, int newX, int newY, int value){
 
-	if(board->spaces[obj.x][obj.y] % 2 == 0){
+	if(board->spaces[newX][newY] % 2 == 0){
 		board->spaces[obj.x][obj.y] += -value;
+		if(board->spaces[obj.x][obj.y] < 0)
+			board->spaces[obj.x][obj.y] = 0;
+
 		obj.x = newX;
 		obj.y = newY;
 		board->spaces[obj.x][obj.y] += value;
@@ -485,6 +589,61 @@ int isValidPos(int x, int y){
 
 	return 1;
 }
+
+int getDir(int x, int y){
+
+	if(x == 0 && y == -1){
+		return 0;
+	}
+	else if(x == 1 && y == 0){
+		return 90;
+	}
+	else if(x == 0 && y == 1){
+		return 180;
+	}
+	else if(x == -1 && y == 0){
+		return 270;
+	}
+
+	return 0;
+}
+
+int smoothDir(int dir){
+
+	int smoothedDir = 0;
+	int betterProximity = 9999;
+	int possibleDir[4] = {0, 90, 180, 270};
+
+	//exceção se o angulo for > 360
+	if(dir >= 360){
+		return smoothedDir = 0;
+	}	
+
+	//para não arredondar sempre para um lado, as vezes rodamos o vetor de trás pra frente
+	int trasPraFrente = rand() % 2;
+	printf("Tras pra frente? %i\n", trasPraFrente);
+	if(trasPraFrente == 0){
+		for(i = 0; i < 4; i++){
+
+			if(abs(dir - possibleDir[i]) < betterProximity){
+				smoothedDir = possibleDir[i];
+				betterProximity = abs(dir - possibleDir[i]);
+			}
+		}
+	}
+	else{
+		for(i = 3; i >= 0; i--){
+
+			if(abs(dir - possibleDir[i]) < betterProximity){
+				smoothedDir = possibleDir[i];
+				betterProximity = abs(dir - possibleDir[i]);
+			}
+		}
+	}
+
+	return smoothedDir;
+}
+
 
 void createGame(){
 
@@ -625,6 +784,84 @@ Fish* create_fish(){
 	fish->timeLapseReproduction = settings->timeLapseReproduction;
 
 	return fish;
+}
+
+Trail* get_trail_by_pos(int x, int y){
+
+	Elem* li = *li_trail;
+	while(li != NULL){
+		Trail* trail = getTrail(li);
+
+		if(trail->obj.x == x && trail->obj.y == y)
+			return trail;
+
+		li = li->prox;
+		printf("achou trail na posilão %i %i\n",x ,y );
+	}
+
+	return NULL;
+}
+
+void create_trail(Object oldObj, Object obj, int diff_x, int diff_y){
+	
+	if(distance(oldObj, obj) == 0){
+		return;
+	}
+
+	//Se não tem rastro na posição antiga do tubarão - cria um novo rastro
+	if(board->spaces[oldObj.x][oldObj.y] != trail_value && 
+		board->spaces[oldObj.x][oldObj.y] != trail_value + fish_value && 
+		board->spaces[oldObj.x][oldObj.y] != trail_value + shark_value){
+
+		Trail* trail = (Trail*)malloc(sizeof(Trail));
+		trail->obj.x = oldObj.x;
+		trail->obj.y = oldObj.y;
+		trail->tempo = 0;
+		trail->dir = getDir(diff_x, diff_y);
+		trail->obj.sprite = trail_sprite;
+
+		trail->obj = moveObject(trail->obj, trail->obj.x, trail->obj.y, trail_value);
+
+		insere_lista_final(li_trail, trail);
+	}
+	else{
+		//Tem rastro nessa posição
+		Trail* trail = get_trail_by_pos(oldObj.x, oldObj.y);
+
+		if(trail != NULL){
+
+			trail->tempo = 0;
+			int oldDir = trail->dir;
+			int currentDir = getDir(diff_x, diff_y);
+			int newDir = (oldDir + currentDir) / 2;
+			newDir = smoothDir(newDir);
+			
+			//Verificar se temos que espelhar, e caso positivo, espelhar de fato
+			if(abs(currentDir - oldDir) >= 180){
+				int espelhar = rand() % 2;
+				if(espelhar == 1){
+					if(newDir < 180){
+						newDir += 180;
+					}
+					else{
+						newDir += -180;
+					}
+				}
+			}
+
+			trail->dir = newDir;
+		}
+	}
+
+	/*Trail* trail = (Trail*)malloc(sizeof(Trail));
+	trail->obj.x = obj.x;
+	trail->obj.y = obj.y;
+	trail->tempo = 10;
+	trail->dir = 1;
+	trail->obj.sprite = trail_sprite;*/
+
+	//insere_lista_final(li_trail, trail);
+
 }
 
 Fish* create_son_fish(Object father1, Object father2){

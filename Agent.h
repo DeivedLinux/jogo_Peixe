@@ -47,6 +47,7 @@ struct trail{
 	Object obj;
 	int dir;
 	int tempo;
+	int strength;
 };
 
 typedef enum 
