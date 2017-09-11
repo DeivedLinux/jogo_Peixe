@@ -3,7 +3,7 @@ and may not be redistributed without written permission.*/
 
 //Using SDL and standard IO
 #include <SDL.h>
-#include <SDL_image.h>
+#include <SDL2/SDL_image.h>
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
@@ -283,6 +283,7 @@ void shark_movement(){
 	}
 }
 
+
 void fish_movement(){
 
 	Elem *li = *li_fish;
@@ -327,7 +328,7 @@ void fish_movement(){
 			fish->obj = moveObject(fish->obj, nextX, nextY);
 
 			//Só reproduz no FISH_IDLE
-			Elem* aux = *li_fish;
+			Elem* aux = li->prox;
 			if(fish->timeLapseReproduction >= settings->timeLapseReproduction){
 				while(aux != NULL){
 					Fish* fish2 = getFish(aux);
