@@ -10,6 +10,21 @@ typedef enum
 	SHARK
 }TypeAgent;
 
+typedef enum 
+{
+	NOOB,
+	VETERAN	
+}Title;
+
+
+typedef enum 
+{
+	NORTH = 0,
+	SOUTH,
+	WEST,
+	EAST
+}Orientaion;
+
 typedef struct 
 {
 	int x;
@@ -17,7 +32,16 @@ typedef struct
 	int blood;
 	TypeAgent type;
 	SDL_Surface* sprite;
+	int time;
+	Title title;
+	Orientaion orientation;
 }Agent;
+
+typedef struct 
+{
+	int time;
+	float angle;
+}Trail;
 
 typedef enum 
 {
