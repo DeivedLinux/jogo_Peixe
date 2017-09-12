@@ -39,6 +39,8 @@ typedef struct{
 	int amountFishes;
 	int perceptionRange;
 	int timeLapseReproduction;
+
+	int isTrailDrawable;
 } Settings;
 
 SDL_Window* window = NULL;
@@ -214,13 +216,18 @@ void draw(){
 		}
 	}
 
-	Elem* li = *li_trail;
-	while(li != NULL){
-		rect.x = getFish(li)->obj.x * rect.w;
-		rect.y = getFish(li)->obj.y * rect.h;
 
-		SDL_BlitSurface( getTrail(li)->obj.sprite, NULL, screenSurface, &rect);
-		li = li->prox;
+	Elem* li;
+
+	if(settings->isTrailDrawable){
+		li = *li_trail;
+		while(li != NULL){
+			rect.x = getFish(li)->obj.x * rect.w;
+			rect.y = getFish(li)->obj.y * rect.h;
+
+			SDL_BlitSurface( getTrail(li)->obj.sprite, NULL, screenSurface, &rect);
+			li = li->prox;
+		}
 	}
 
 	li = *li_shark;
@@ -346,38 +353,39 @@ void shark_movement(){
 
 			if(shark->prey == NULL){
 				shark->state = SHARK_IDLE;
-				continue;
-			}
-
-			Fish* fish = shark->prey;
-			int nextX = shark->obj.x;
-			int nextY = shark->obj.y;
-
-			if(shark->obj.x < fish->obj.x){
-				nextX += 1;
-			}
-			else if(shark->obj.x > fish->obj.x){
-				nextX += -1;
 			}
 			else{
-				if(shark->obj.y < fish->obj.y){
-					nextY += 1;
-				}
-				else if(shark->obj.y > fish->obj.y){
-					nextY += -1;
-				}
-			}
 
-			//shark->obj = moveObject(shark->obj, nextX, nextY, shark_value);
-			Object oldObj = shark->obj;
-			shark->obj = moveObject(shark->obj, nextX, nextY, shark_value);
-			create_trail(oldObj, shark->obj, nextX - shark->obj.x, nextY - shark->obj.y);
+				Fish* fish = shark->prey;
+				int nextX = shark->obj.x;
+				int nextY = shark->obj.y;
 
-			int d = distance(shark->obj, fish->obj);
-			if(d <= 1){
-				shark->state = SHARK_IDLE;
-				remove_lista_fish(li_fish, fish->obj);
-				shark->prey = NULL;
+				if(shark->obj.x < fish->obj.x){
+					nextX += 1;
+				}
+				else if(shark->obj.x > fish->obj.x){
+					nextX += -1;
+				}
+				else{
+					if(shark->obj.y < fish->obj.y){
+						nextY += 1;
+					}
+					else if(shark->obj.y > fish->obj.y){
+						nextY += -1;
+					}
+				}
+
+				//shark->obj = moveObject(shark->obj, nextX, nextY, shark_value);
+				Object oldObj = shark->obj;
+				shark->obj = moveObject(shark->obj, nextX, nextY, shark_value);
+				create_trail(oldObj, shark->obj, nextX - shark->obj.x, nextY - shark->obj.y);
+
+				int d = distance(shark->obj, fish->obj);
+				if(d <= 1){
+					shark->state = SHARK_IDLE;
+					remove_lista_fish(li_fish, fish->obj);
+					shark->prey = NULL;
+				}
 			}
 
 		}
@@ -424,17 +432,11 @@ void fish_movement(){
 				fish->obj = moveObject(fish->obj, nextX, nextY, fish_value);
 
 				//Vai tentar ver se ele tem que reproduzir
-				Elem* aux = li;
+				Elem* aux = li->prox;
 				if(fish->timeLapseReproduction >= settings->timeLapseReproduction){
 					
 					while(aux != NULL){
 						Fish* fish2 = getFish(aux);
-						
-						if(fish2->obj.x == fish->obj.x &&
-							fish2->obj.y == fish->obj.y){
-							aux = aux->prox;
-							continue;
-						}
 
 						int d = distance(fish->obj, fish2->obj);
 						if(d <= 2 && 
@@ -498,7 +500,6 @@ void update_trails(){
 	while(li != NULL){
 
 		Trail* trail = getTrail(li);
-		printf("%i %i\n",trail->obj.x, trail->obj.y );
 		trail->strength = decay_strength(trail->tempo);
 		trail->tempo += 1;
 		
@@ -621,7 +622,6 @@ int smoothDir(int dir){
 
 	//para não arredondar sempre para um lado, as vezes rodamos o vetor de trás pra frente
 	int trasPraFrente = rand() % 2;
-	printf("Tras pra frente? %i\n", trasPraFrente);
 	if(trasPraFrente == 0){
 		for(i = 0; i < 4; i++){
 
@@ -647,25 +647,34 @@ int smoothDir(int dir){
 
 void createGame(){
 
-	board = create_board();
-	
+	board = create_board();	
 	settings = create_settings();
 
-	//FAZER SÓ OS TUBARÕES
 	printf("Insira a quantidade de tubaroes: ");
 	scanf("%i", &settings->amountSharks);
 
 	printf("Insira a quantidade de peixes: ");
 	scanf("%i", &settings->amountFishes);
 
-	/*printf("Insira a range de captura dos tubaroes: ");
-	scanf("%i", &settings->captureRange);
 
-	printf("Insira a range de percepcao dos peixes: ");
-	scanf("%i", &settings->perceptionRange);
+	int wantExtraSettings = 0;
+	printf("(1)=sim / (0)=nao. Mostrar opcoes extras? ");
+	scanf("%i", &wantExtraSettings);
 
-	printf("Insira a quantidade passados de round para nova reproducao: ");
-	scanf("%i", &settings->timeLapseReproduction);*/
+	if(wantExtraSettings){
+
+		printf("Insira a range de captura dos tubaroes: ");
+		scanf("%i", &settings->captureRange);
+
+		printf("Insira a range de percepcao dos peixes: ");
+		scanf("%i", &settings->perceptionRange);
+
+		printf("Insira a quantidade passados de round para nova reproducao: ");
+		scanf("%i", &settings->timeLapseReproduction);
+
+		printf("(1)=sim / (0)=nao. Mostrar rastros?");
+		scanf("%i", &settings->isTrailDrawable);
+	}
 	
 }
 
@@ -701,6 +710,8 @@ Settings* create_settings(){
 	settings->amountFishes = 10;
 	settings->perceptionRange = 5;
 	settings->timeLapseReproduction = 10;
+
+	settings->isTrailDrawable = 1;
 
 	return settings;
 }
@@ -796,7 +807,6 @@ Trail* get_trail_by_pos(int x, int y){
 			return trail;
 
 		li = li->prox;
-		printf("achou trail na posilão %i %i\n",x ,y );
 	}
 
 	return NULL;
