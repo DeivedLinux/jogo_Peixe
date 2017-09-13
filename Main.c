@@ -31,15 +31,16 @@ typedef struct{
 } Board;
 
 typedef struct{
-	int life;
-
+	//Shark
 	int amountSharks;
 	int captureRange;
-	
+	int sharkLife;
+	int sharkTimeLapseToReproduction;
+	//Fish
 	int amountFishes;
 	int perceptionRange;
-	int timeLapseReproduction;
-
+	int fishLife;
+	int fishTimeLapseToReproduction;
 	int isTrailDrawable;
 } Settings;
 
@@ -84,14 +85,18 @@ Shark* create_shark();
 Fish* create_fish();
 void create_trail(Object oldObj, Object obj, int diff_x, int diff_y);
 Fish* create_son_fish(Object father1, Object father2);
+Shark* create_son_shark(Object father1, Object father2);
 Board* create_board();
 Settings* create_settings();
 Trail* get_trail_by_pos(int x, int y);
 
+void shark_update();
+void shark_movement(Shark* shark);
+void fish_update();
 void fish_movement();
-void shark_movement();
 
 int* get_avaibles_mov_pos(Object obj, int* size);
+int* get_avaibles_son_pos(Object obj, int* size);
 
 int main( int argc, char* args[] ){	
 
@@ -182,7 +187,8 @@ int main( int argc, char* args[] ){
 }
 
 void update(){
-	shark_movement();
+	shark_update();
+
 	fish_movement();
 	update_trails();
 
@@ -197,6 +203,120 @@ void update(){
 		}
 		printf("\n");
 	}*/
+}
+
+int isDead(Object obj){
+
+	if(obj.life <= 0)
+		return 1;
+
+	return 0;
+}
+
+int canReproduce(int currLife, int maxLife, int timeLapseToReproduction){
+
+	if(maxLife - currLife > timeLapseToReproduction)
+		return 1;
+
+	return 0;
+}
+
+int hasSharkReproduced(Shark* shark){
+
+	if(shark->reproducedThisRound == 1)
+		return 1;
+
+	return 0;
+}
+
+int isDistanceAcceptableToReproduce(int distance){
+
+	if(distance <= 2)
+		return 1;
+
+	return 0;
+}
+
+int reproduceShark(Elem* li, Shark* shark){
+
+	if(canReproduce(shark->obj.life, settings->sharkLife, settings->sharkTimeLapseToReproduction)){
+
+		Elem* aux = li->prox;
+		while(aux != NULL){
+
+			Shark* shark2 = getShark(aux);
+
+			int d = distance(shark->obj, shark2->obj);
+			if(isDistanceAcceptableToReproduce(d) && canReproduce(shark2->obj.life, settings->sharkLife, settings->sharkTimeLapseToReproduction)){
+
+				shark->timeLapseToReproduction += 10;
+				shark2->timeLapseToReproduction += 10;
+				Shark* son = create_son_shark(shark->obj, shark2->obj);
+				shark2->reproducedThisRound = 1;
+				if(son != NULL){
+					insere_lista_final(li_shark, son);
+				}
+
+				return 1;
+			}
+
+			aux = aux->prox;
+		}
+	}
+
+	return 0;
+}
+
+Elem* removeElement(Lista* li, Elem* ele, Elem* ant){
+
+	Elem* node = ele;
+
+	if(ant == NULL){
+		*li = node->prox;
+	}
+	else{
+		ant->prox = node->prox;
+	}
+
+	ele = node->prox;
+	free(node);
+
+	return ele;
+}
+
+void shark_update(){
+
+	Elem* li = *li_shark;
+	Elem* ant = NULL; //Guardando o anterior para casos de remoção
+
+	while(li != NULL){
+
+		Shark* shark = getShark(li);
+
+		if(isDead(shark->obj)){
+			printf("morte\n");
+			li = removeElement(li_shark, li, ant);
+		}
+		else{ 
+			if(hasSharkReproduced(shark)){
+				printf("já reproduziu\n");
+				//Não faz nada - já procriou nesse round
+			}
+			else if(reproduceShark(li, shark)){
+				printf("reproduziu agora\n");
+				//Não faz mais nada - acabou de reproduzir
+			}
+			else{
+				printf("anda\n");
+				shark_movement(shark);			
+			}
+			shark->obj.life--;
+				
+			ant = li;
+			li = li->prox;
+		}
+	}
+
 }
 
 void draw(){
@@ -279,12 +399,7 @@ int* get_dir_coordinates(int dir){
 	return coord;
 }
 
-void shark_movement(){
-
-	Elem* li = *li_shark;
-	while(li != NULL){
-
-		Shark* shark = getShark(li);
+void shark_movement(Shark* shark){
 
 		//Primeiro checa se ele está em algum rastro
 		if(board->spaces[shark->obj.x][shark->obj.y] == trail_value + shark_value){
@@ -336,11 +451,11 @@ void shark_movement(){
 					Elem* el_fish = *li_fish;
 					while(el_fish != NULL){
 						
-						int d = distance(getShark(li)->obj, getFish(el_fish)->obj);
-						if(d <= getShark(li)->captureRange && d < betterDistance){
+						int d = distance(shark->obj, getFish(el_fish)->obj);
+						if(d <= shark->captureRange && d < betterDistance){
 							
-							getShark(li)->prey = getFish(el_fish);
-							getShark(li)->state = SHARK_CHASE;
+							shark->prey = getFish(el_fish);
+							shark->state = SHARK_CHASE;
 							betterDistance = d;
 						}
 
@@ -390,8 +505,6 @@ void shark_movement(){
 
 		}
 
-		li = li->prox;
-	}
 }
 
 void fish_movement(){
@@ -433,17 +546,17 @@ void fish_movement(){
 
 				//Vai tentar ver se ele tem que reproduzir
 				Elem* aux = li->prox;
-				if(fish->timeLapseReproduction >= settings->timeLapseReproduction){
+				if(fish->timeLapseToReproduction >= settings->fishTimeLapseToReproduction){
 					
 					while(aux != NULL){
 						Fish* fish2 = getFish(aux);
 
 						int d = distance(fish->obj, fish2->obj);
 						if(d <= 2 && 
-							fish2->timeLapseReproduction >= settings->timeLapseReproduction){
+							fish2->timeLapseToReproduction >= settings->fishTimeLapseToReproduction){
 
-							fish->timeLapseReproduction = 0;
-							fish2->timeLapseReproduction = 0;
+							fish->timeLapseToReproduction = 0;
+							fish2->timeLapseToReproduction = 0;
 							Fish* son = create_son_fish(fish->obj, fish2->obj);
 							if(son != NULL)
 								insere_lista_final(li_fish, son);
@@ -480,7 +593,7 @@ void fish_movement(){
 			fish->obj = moveObject(fish->obj, nextX, nextY, fish_value);
 		}
 
-		fish->timeLapseReproduction++;
+		fish->timeLapseToReproduction++;
 		li = li->prox;
 	}
 }
@@ -557,6 +670,34 @@ int* get_avaibles_mov_pos(Object obj, int* size){
 	return real_mov_pos;
 }
 
+int* get_avaibles_son_pos(Object obj, int* size){
+
+	*size = 0;
+	int pos_avaible[8] = { -1, -1, -1, -1, -1, -1, -1 , -1};
+
+	for(i = 0; i < 8; i++){
+
+		int aux_x = obj.x + son_possib[i][0];
+		int aux_y = obj.y + son_possib[i][1];
+
+		if(isValidPos(aux_x, aux_y)){
+			(*size)++;
+		}
+	}
+
+	int* real_mov_pos = (int*)malloc((*size) * sizeof(int)); 
+	int currentPos = 0;
+	for(i = 0; i < 8; i++){
+		if(pos_avaible[i] != -1){
+			real_mov_pos[currentPos] = pos_avaible[i];
+			currentPos++;
+		}
+	}
+
+	return real_mov_pos;
+
+}
+
 
 Object moveObject(Object obj, int newX, int newY, int value){
 
@@ -584,7 +725,7 @@ int isValidPos(int x, int y){
 		return 0;
 	}
 
-	if(board->spaces[x][y] == 1){
+	if(board->spaces[x][y] == fish_value || board->spaces[x][y] == shark_value){
 		return 0;
 	}
 
@@ -669,8 +810,11 @@ void createGame(){
 		printf("Insira a range de percepcao dos peixes: ");
 		scanf("%i", &settings->perceptionRange);
 
-		printf("Insira a quantidade passados de round para nova reproducao: ");
-		scanf("%i", &settings->timeLapseReproduction);
+		printf("Insira o tempo de amadurecimento para a reprodução dos tubaroes: ");
+		scanf("%i", &settings->sharkTimeLapseToReproduction);
+
+		printf("Insira o tempo de amadurecimento para a reprodução dos peixes: ");
+		scanf("%i", &settings->fishTimeLapseToReproduction);
 
 		printf("(1)=sim / (0)=nao. Mostrar rastros?");
 		scanf("%i", &settings->isTrailDrawable);
@@ -701,16 +845,17 @@ Settings* create_settings(){
 	Settings* settings;
 	settings = (Settings*)malloc(sizeof(Settings));
 
-	//default settings
-	settings->life = 50;
-
+	//Default settings
+	//Shark
 	settings->amountSharks = 10;
 	settings->captureRange = 10;
-
+	settings->sharkLife = 50;
+	settings->sharkTimeLapseToReproduction = 30;
+	//Fish
 	settings->amountFishes = 10;
 	settings->perceptionRange = 5;
-	settings->timeLapseReproduction = 10;
-
+	settings->fishLife = 50;
+	settings->fishTimeLapseToReproduction = 30;
 	settings->isTrailDrawable = 1;
 
 	return settings;
@@ -736,6 +881,24 @@ Object create_object_father_pos(Object father1, Object father2){
 	Object obj;
 	obj.x = -1;
 	obj.y = -1;
+
+	int size = 0;
+	int* poss_index = get_avaibles_son_pos(father1, &size);
+
+	int nextX = -1;
+	int nextY = -1;
+
+	if(size != 0){
+
+		int sorted = poss_index[rand() % size];
+		nextX = father1.x + mov_possib[sorted][0];
+		nextY = father1.y + mov_possib[sorted][1];
+	}
+
+	obj.x = nextX;
+	obj.y = nextY;
+
+	/*
 	int tries = 0;
 	do{
 		int sorted = rand() % 8;
@@ -759,7 +922,7 @@ Object create_object_father_pos(Object father1, Object father2){
 		obj.x = -1;
 		obj.y = -1;
 		return obj;
-	}
+	}*/
 
 	obj = moveObject(obj, obj.x, obj.y, fish_value);
 
@@ -771,11 +934,14 @@ Shark* create_shark(){
 	shark = (Shark*)malloc(sizeof(Shark));
 
 	shark->obj = create_object_random_pos(shark_value);
-	shark->obj.life = settings->life; 
+	shark->obj.life = settings->sharkLife; 
 	shark->obj.sprite = shark_sprite;
 
 	shark->state = SHARK_IDLE;
 	shark->captureRange = settings->captureRange;
+	shark->timeLapseToReproduction = settings->sharkTimeLapseToReproduction;
+	shark->isLeader = 0;
+	shark->reproducedThisRound = 0;
 	shark->prey = NULL; 
 
 	return shark;
@@ -786,13 +952,15 @@ Fish* create_fish(){
 	fish = (Fish*)malloc(sizeof(Fish));
 
 	fish->obj = create_object_random_pos(fish_value);
-	fish->obj.life = settings->life;
+	fish->obj.life = settings->fishLife;
 	fish->obj.sprite = fish_sprite;
 
 	fish->state = FISH_IDLE;
 	fish->perceptionRange = settings->perceptionRange;
+	fish->timeLapseToReproduction = settings->fishTimeLapseToReproduction;
+	fish->isLeader = 0;
+	fish->reproducedThisRound = 0;
 	fish->predator = NULL;
-	fish->timeLapseReproduction = settings->timeLapseReproduction;
 
 	return fish;
 }
@@ -882,15 +1050,37 @@ Fish* create_son_fish(Object father1, Object father2){
 	if(fish->obj.x == -1 || fish->obj.y == -1)
 		return NULL;
 
-	fish->obj.life = settings->life;
+	fish->obj.life = settings->fishLife;
 	fish->obj.sprite = fish_sprite;
 
 	fish->state = FISH_IDLE;
 	fish->perceptionRange = settings->perceptionRange;
+	fish->timeLapseToReproduction = settings->fishTimeLapseToReproduction;
+	fish->isLeader = 0;
 	fish->predator = NULL;
-	fish->timeLapseReproduction = 0;
 
 	return fish;
+}
+
+Shark* create_son_shark(Object father1, Object father2){
+	Shark* shark;
+	shark = (Shark*)malloc(sizeof(Shark));
+
+	shark->obj = create_object_father_pos(father1, father2);
+	//if(shark->obj.x == -1 || shark->obj.y == -1)
+	//	return NULL;
+
+	shark->obj.life = settings->sharkLife; 
+	shark->obj.sprite = shark_sprite;
+
+	shark->state = SHARK_IDLE;
+	shark->captureRange = settings->captureRange;
+	shark->timeLapseToReproduction = settings->sharkTimeLapseToReproduction;
+	shark->isLeader = 0;
+	shark->reproducedThisRound = 0;
+	shark->prey = NULL; 
+
+	return shark;
 }
 
 SDL_Surface* loadSurface(char path[]){

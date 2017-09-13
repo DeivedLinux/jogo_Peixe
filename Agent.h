@@ -28,18 +28,23 @@ typedef struct
 typedef struct shark Shark;
 typedef struct trail Trail;
 
-typedef struct{
+typedef struct {
 	Object obj;
 	StateFish state;
 	int perceptionRange;
+	int timeLapseToReproduction;
+	int isLeader;
+	int reproducedThisRound;
 	Shark* predator;
-	int timeLapseReproduction;
 } Fish;
 
-struct shark{
+struct shark {
 	Object obj;
 	StateShark state;
 	int captureRange;
+	int timeLapseToReproduction;
+	int isLeader;
+	int reproducedThisRound;
 	Fish* prey;
 };
 
@@ -55,8 +60,6 @@ typedef enum
 	FISH,
 	SHARK
 } TypeAgent;
-
-
 
 //Agent* newAgent(TypeAgent type);
 
