@@ -50,7 +50,9 @@ SDL_Surface* screenSurface = NULL;
 SDL_Surface* square_sprite = NULL;
 SDL_Surface* fish_sprite = NULL;
 SDL_Surface* shark_sprite = NULL;
+SDL_Surface* shark_shiny_sprite = NULL;
 SDL_Surface* trail_sprite = NULL;
+
 
 Board* board;
 Settings* settings;
@@ -81,22 +83,38 @@ int distance(Object a, Object b);
 int isValidPos(int x, int y);
 Object moveObject(Object obj, int newX, int newY, int value);
 
-Shark* create_shark();
+
 Fish* create_fish();
 void create_trail(Object oldObj, Object obj, int diff_x, int diff_y);
 Fish* create_son_fish(Object father1, Object father2);
-Shark* create_son_shark(Object father1, Object father2);
 Board* create_board();
 Settings* create_settings();
 Trail* get_trail_by_pos(int x, int y);
 
-void shark_update();
-void shark_movement(Shark* shark);
 void fish_update();
 void fish_movement();
 
 int* get_avaibles_mov_pos(Object obj, int* size);
 int* get_avaibles_son_pos(Object obj, int* size);
+
+//SHARK FUNCTIONS 
+Shark* create_shark();
+Shark* create_son_shark(Object father1, Object father2);
+void shark_update();
+void shark_movement(Shark* shark);
+int shark_reproduction(Elem* li, Shark* shark);
+
+void give_leader_to_shark(Shark* shark);
+int has_shark_reproduced(Shark* shark);
+
+//FISH FUNCTIONS
+
+//GLOBAL FUNCIONS
+int isDead(Object obj);
+int canReproduce(int currLife, int maxLife, int timeLapseToReproduction);
+int isDistanceAcceptableToReproduce(int distance);
+int is_free_pos(int x, int y);
+
 
 int main( int argc, char* args[] ){	
 
@@ -116,11 +134,14 @@ int main( int argc, char* args[] ){
 	//Inicializando função de random
 	srand(time(NULL)); 
 	
-
 	li_shark = cria_lista();
 	for(i = 0; i < settings->amountSharks; i++){
 		Shark* shark = create_shark();
 		insere_lista_final(li_shark, shark);
+
+
+		if(i == 0)
+			give_leader_to_shark(shark);
 	}
 
 	li_fish = cria_lista();
@@ -222,7 +243,7 @@ int canReproduce(int currLife, int maxLife, int timeLapseToReproduction){
 	return 0;
 }
 
-int hasSharkReproduced(Shark* shark){
+int has_shark_reproduced(Shark* shark){
 
 	if(shark->reproducedThisRound == 1)
 		return 1;
@@ -238,7 +259,7 @@ int isDistanceAcceptableToReproduce(int distance){
 	return 0;
 }
 
-int reproduceShark(Elem* li, Shark* shark){
+int shark_reproduction(Elem* li, Shark* shark){
 
 	if(canReproduce(shark->obj.life, settings->sharkLife, shark->timeLapseToReproduction)){
 
@@ -268,22 +289,6 @@ int reproduceShark(Elem* li, Shark* shark){
 	return 0;
 }
 
-Elem* removeElement(Lista* li, Elem* ele, Elem* ant){
-
-	Elem* node = ele;
-
-	if(ant == NULL){
-		*li = node->prox;
-	}
-	else{
-		ant->prox = node->prox;
-	}
-
-	ele = node->prox;
-	free(node);
-
-	return ele;
-}
 
 void shark_update(){
 
@@ -297,14 +302,17 @@ void shark_update(){
 
 		if(isDead(shark->obj)){
 			//printf("morte\n");
+			if(shark->isLeader && li->prox != NULL)
+				give_leader_to_shark(getShark(li->prox));
+
 			li = removeElement(li_shark, li, ant);
 		}
 		else{ 
-			if(hasSharkReproduced(shark)){
+			if(has_shark_reproduced(shark)){
 				//printf("já reproduziu %i\n", count);
 				//Não faz nada - já procriou nesse round
 			}
-			else if(reproduceShark(li, shark)){
+			else if(shark_reproduction(li, shark)){
 				//printf("reproduziu agora %i\n", count);
 				//Não faz mais nada - acabou de reproduzir
 			}
@@ -336,20 +344,20 @@ void draw(){
 		for(j = 0; j < board->height; j++){
 			rect.x = i * rect.w;
 			rect.y = j * rect.h;
-			SDL_BlitSurface( board->sprite, NULL, screenSurface, &rect );
+			SDL_BlitSurface(board->sprite, NULL, screenSurface, &rect );
 		}
 	}
 
 
 	Elem* li;
-
+	
 	if(settings->isTrailDrawable){
 		li = *li_trail;
 		while(li != NULL){
 			rect.x = getFish(li)->obj.x * rect.w;
 			rect.y = getFish(li)->obj.y * rect.h;
 
-			SDL_BlitSurface( getTrail(li)->obj.sprite, NULL, screenSurface, &rect);
+			SDL_BlitSurface(getTrail(li)->obj.sprite, NULL, screenSurface, &rect);
 			li = li->prox;
 		}
 	}
@@ -837,7 +845,6 @@ int smoothDir(int dir){
 	return smoothedDir;
 }
 
-
 void createGame(){
 
 	board = create_board();	
@@ -871,7 +878,6 @@ void createGame(){
 		printf("(1)=sim / (0)=nao. Mostrar rastros?");
 		scanf("%i", &settings->isTrailDrawable);
 	}
-	
 }
 
 Board* create_board(){
@@ -1003,6 +1009,12 @@ Shark* create_shark(){
 	shark->prey = NULL; 
 
 	return shark;
+}
+
+void give_leader_to_shark(Shark* shark){
+	
+	shark->isLeader = 1;
+	shark->obj.sprite = shark_shiny_sprite;
 }
 
 Fish* create_fish(){
@@ -1218,8 +1230,9 @@ int init(){
 int loadSprites(){
 
 	square_sprite = loadSurface("square.png");
-	fish_sprite = loadSurface("fish3.png");
-	shark_sprite = loadSurface("shark2.png");
+	fish_sprite = loadSurface("fish_3.png");
+	shark_sprite = loadSurface("shark.png");
+	shark_shiny_sprite = loadSurface("shark_shiny.png");
 	trail_sprite = loadSurface("trail.png");
 
 	if(square_sprite == NULL || fish_sprite == NULL || shark_sprite == NULL)

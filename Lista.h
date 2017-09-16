@@ -25,5 +25,7 @@ int insere_lista_final(Lista* li, void* element);
 
 int remove_lista_fish(Lista* li, Object obj);
 
+Elem* removeElement(Lista* li, Elem* ele, Elem* ant);
+
 
 #endif

@@ -71,3 +71,20 @@ int remove_lista_fish(Lista* li, Object obj){
 
 	return 1;
 }
+
+Elem* removeElement(Lista* li, Elem* ele, Elem* ant){
+
+	Elem* node = ele;
+
+	if(ant == NULL){
+		*li = node->prox;
+	}
+	else{
+		ant->prox = node->prox;
+	}
+
+	ele = node->prox;
+	free(node);
+
+	return ele;
+}
