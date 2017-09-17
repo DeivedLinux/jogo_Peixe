@@ -1,4 +1,3 @@
-#include "Agent.h"
 #include "Lista.h"
 
 Lista* cria_lista(){
