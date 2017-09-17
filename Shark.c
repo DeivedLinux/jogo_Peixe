@@ -1,4 +1,8 @@
 #include "Shark.h"
+#include <math.h>
+
+#define getFish(Obj) ((Fish*)Obj->dados)
+
 
 Shark* create_shark(int shark_value, SDL_Surface** shark_sprite){
 	Shark* shark;
@@ -38,7 +42,7 @@ Shark* create_son_shark(Object father1, Object father2, int shark_value, int my_
 	return shark;
 }
 
-void shark_update(Lista* li_shark, SDL_Surface** shark_shiny_sprite, int my_son_possib[8][2], int mov_possib[4][2]){
+void shark_update(Lista* li_shark, SDL_Surface** shark_shiny_sprite, int my_son_possib[8][2], int mov_possib[4][2], Lista* li_fish){
 	
 	Elem* li = *li_shark;
 	Elem* ant = NULL; //Guardando o anterior para casos de remoção
@@ -63,7 +67,7 @@ void shark_update(Lista* li_shark, SDL_Surface** shark_shiny_sprite, int my_son_
 				//Conseguiu reproduzir  - Não faz mais nada
 			}
 			else{
-				shark_movement(shark, mov_possib);		
+				shark_movement(shark, mov_possib, li_fish);		
 			}
 			shark->obj.life--;
 				
@@ -75,9 +79,60 @@ void shark_update(Lista* li_shark, SDL_Surface** shark_shiny_sprite, int my_son_
 	}
 }
 
-void shark_movement(Shark* shark, int mov_possib[4][2]){
+void shark_movement(Shark* shark, int mov_possib[4][2], Lista* li_fish){
+
+		if(eat_fish_close(shark, li_fish)){
+			printf("%i comi um peixe\n", shark->isLeader );
+			return;
+		}
+
+
+
+		if(shark->isLeader){
+
+			if(shark->prey == NULL)
+				search_fish(shark, li_fish);
+		}
+		else{
+
+		}
+
 
 		
+		if(shark->state == SHARK_CHASE && shark->isLeader){
+
+			if(shark->prey == NULL)
+				shark->state = SHARK_IDLE;
+			else{
+
+				Fish* fish = shark->prey;
+				int nextX = shark->obj.x;
+				int nextY = shark->obj.y;
+
+				if(shark->obj.x < fish->obj.x){
+					nextX += 1;
+				}
+				else if(shark->obj.x > fish->obj.x){
+					nextX += -1;
+				}
+				else{
+					if(shark->obj.y < fish->obj.y){
+						nextY += 1;
+					}
+					else if(shark->obj.y > fish->obj.y){
+						nextY += -1;
+					}
+				}
+
+				if(!is_valid_pos(nextX, nextY)){
+					adjuste_pos_circle_scenery(&nextX, &nextY);
+				}
+
+				shark->obj = move_object(shark->obj, nextX, nextY, shark->boardValue);
+			}
+		}
+
+
 		if(shark->state == SHARK_IDLE){
 
 			move_to_random_pos(&shark->obj, mov_possib, shark->boardValue);
@@ -165,6 +220,58 @@ int has_shark_reproduced(Shark* shark){
 
 	if(shark->reproducedThisRound == 1)
 		return 1;
+
+	return 0;
+}
+
+void search_fish(Shark* shark, Lista* li_fish){
+
+	int betterDistance = 1000;
+
+	Elem* li = *li_fish;
+	while(li != NULL){
+
+		Fish* fish = getFish(li);
+		int d = distance(shark->obj, fish->obj);
+		if(d <= shark->captureRange){
+
+			if(d < betterDistance){
+				shark->prey = fish;
+				betterDistance = d;
+				shark->state = SHARK_CHASE;
+			}
+		}
+		
+
+		li = li->prox;
+	}
+
+}
+
+int eat_fish_close(Shark* shark, Lista* li_fish){
+
+	Elem* li = *li_fish;
+	Elem* ant = NULL;
+
+	while(li != NULL){
+
+		Fish* fish = getFish(li);
+		int d = distance(shark->obj, fish->obj);
+		if(d <= 2){
+
+			if(d == 2 && abs(shark->obj.x - fish->obj.x) == 2 || abs(shark->obj.y - fish->obj.y) == 2){
+
+			}
+			else{
+				shark->obj.life += 10;
+				removeElement(li_fish, li, ant);
+				return 1;
+			}
+		}
+		
+		ant = li;
+		li = li->prox;
+	}
 
 	return 0;
 }

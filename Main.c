@@ -60,7 +60,6 @@ void update();
 
 
 //FISH FUNCTIONS
-Fish* create_fish();
 Fish* create_son_fish(Object father1, Object father2);
 void create_trail(Object oldObj, Object obj, int diff_x, int diff_y);
 Trail* get_trail_by_pos(int x, int y);
@@ -100,7 +99,7 @@ int main( int argc, char* args[] ){
 
 	li_fish = cria_lista();
 	for(i = 0; i < settings->amountFishes; i++){
-		Fish* fish = create_fish();
+		Fish* fish = create_fish(fish_value, fish_sprite);
 		insere_lista_final(li_fish, fish);
 	}
 
@@ -175,7 +174,7 @@ int main( int argc, char* args[] ){
 }
 
 void update(){
-	shark_update(li_shark, shark_shiny_sprite, son_possib, mov_possib);
+	shark_update(li_shark, shark_shiny_sprite, son_possib, mov_possib, li_fish);
 }
 
 
@@ -446,23 +445,6 @@ int smoothDir(int dir){
 	return smoothedDir;
 }
 
-Fish* create_fish(){
-	Fish* fish;
-	fish = (Fish*)malloc(sizeof(Fish));
-
-	fish->obj = create_object_random_pos(fish_value);
-	fish->obj.life = settings->fishLife;
-	fish->obj.sprite = fish_sprite;
-
-	fish->state = FISH_IDLE;
-	fish->perceptionRange = settings->perceptionRange;
-	fish->timeLapseToReproduction = settings->fishTimeLapseToReproduction;
-	fish->isLeader = 0;
-	fish->reproducedThisRound = 0;
-	fish->predator = NULL;
-
-	return fish;
-}
 
 Trail* get_trail_by_pos(int x, int y){
 
