@@ -83,6 +83,7 @@ Elem* removeElement(Lista* li, Elem* ele, Elem* ant){
 	}
 
 	ele = node->prox;
+	free(node->dados);
 	free(node);
 
 	return ele;

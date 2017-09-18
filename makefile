@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = Lista.c Fish.c Shark.c GameManager.c Agent.c Main.c
+OBJS = Lista.c Fish.c Shark.c Trail.c GameManager.c Agent.c Main.c
 
 #CC specifies which compiler we're using
 CC = gcc

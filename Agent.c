@@ -36,6 +36,9 @@ int adjuste_pos_circle_scenery(int* x, int* y){
 
 Object move_object(Object obj, int newX, int newY, int value){
 
+	if(!is_free_pos(newX, newY))
+		return obj;
+
 	if(is_valid_pos(obj.x, obj.y))
 		board->spaces[obj.x][obj.y] += -value;
 	
@@ -43,6 +46,14 @@ Object move_object(Object obj, int newX, int newY, int value){
 	obj.y = newY;
 	board->spaces[obj.x][obj.y] += value;
 
+	return obj;
+}
+
+Object create_object(Object obj, int newX, int newY, int value){
+	
+	obj.x = newX;
+	obj.y = newY;
+	board->spaces[obj.x][obj.y] += value;
 	return obj;
 }
 

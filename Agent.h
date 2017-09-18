@@ -38,7 +38,10 @@ typedef struct {
 	int timeLapseToReproduction;
 	int isLeader;
 	int reproducedThisRound;
+	int boardValue;
+	int orientation;
 	Shark* predator;
+	Trail* trail;
 } Fish;
 
 struct shark {
@@ -50,19 +53,21 @@ struct shark {
 	int reproducedThisRound;
 	int boardValue;
 	Fish* prey;
+	Trail* trail;
 };
 
 struct trail{
 	Object obj;
 	int dir;
 	int tempo;
-	int strength;
+	int str;
 };
 
 int adjuste_pos_circle_scenery(int* x, int* y);
 int is_valid_pos(int x, int y);
 int is_free_pos(int x, int y);
 Object move_object(Object obj, int newX, int newY, int value);
+Object create_object(Object obj, int newX, int newY, int value);
 void move_to_random_pos(Object* object, int mov_possib[4][2], int value);
 int distance(Object a, Object b);
 int isDead(Object obj);
