@@ -353,7 +353,7 @@ int eat_fish_close(Shark* shark){
 
 		Fish* fish = getFish(li);
 		int d = distance(shark->obj, fish->obj);
-		if(d <= 2){
+		if(d <= 1){
 
 			if(d == 2 && abs(shark->obj.x - fish->obj.x) == 2 || abs(shark->obj.y - fish->obj.y) == 2){
 

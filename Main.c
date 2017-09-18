@@ -90,7 +90,7 @@ int main( int argc, char* args[] ){
 	li_shark_trail = cria_lista();
 	li_fish_trail = cria_lista();
 	setupSharkVariables(li_shark, li_fish, li_shark_trail, shark_sprite, shark_shiny_sprite, trail_sprite, &mov_possib, &son_possib, shark_value, trail_value);
-	//setupFishVariables(li_shark, li_fish, li_fish_trail, fish_sprite, fish_shiny_sprite, trail_sprite, &mov_possib, &son_possib, fish_value, trail_value);
+	setupFishVariables(li_shark, li_fish, li_fish_trail, fish_sprite, fish_shiny_sprite, trail_sprite, &mov_possib, &son_possib, fish_value, trail_value);
 	
 	//Inicializando função de random
 	srand(time(NULL)); 
@@ -220,6 +220,17 @@ void draw(){
 		}
 	}
 
+	li = *li_fish_trail;
+	if(settings->isTrailDrawable){
+		while(li != NULL){
+			rect.x = getTrail(li)->obj.x * rect.w;
+			rect.y = getTrail(li)->obj.y * rect.h;
+
+			SDL_BlitSurface(getTrail(li)->obj.sprite, NULL, screenSurface, &rect);
+			li = li->prox;
+		}
+	}
+
 	li = *li_shark;
 	while(li != NULL){
 		rect.x = getShark(li)->obj.x * rect.w;
@@ -235,9 +246,9 @@ void draw(){
 
 		Fish* fish = getFish(li);
 		if(!fish->isLeader)
-			SDL_BlitSurface(fish_sprite[fish->orientation], NULL, screenSurface, &rect);
+			SDL_BlitSurface(fish_sprite[fish->orientation % 4], NULL, screenSurface, &rect);
 		else
-			SDL_BlitSurface(fish_shiny_sprite[fish->orientation], NULL, screenSurface, &rect);
+			SDL_BlitSurface(fish_shiny_sprite[fish->orientation % 4], NULL, screenSurface, &rect);
 
 		li = li->prox;
 	}

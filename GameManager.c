@@ -28,13 +28,13 @@ Settings* create_settings(){
 	//Shark
 	settings->amountSharks = 10;
 	settings->captureRange = 10;
-	settings->sharkLife = 30;
-	settings->sharkTimeLapseToReproduction = 25;
+	settings->sharkLife = 50;
+	settings->sharkTimeLapseToReproduction = 45;
 	//Fish
 	settings->amountFishes = 10;
 	settings->perceptionRange = 5;
-	settings->fishLife = 50;
-	settings->fishTimeLapseToReproduction = 30;
+	settings->fishLife = 40;
+	settings->fishTimeLapseToReproduction = 35;
 	settings->isTrailDrawable = 1;
 
 	return settings;

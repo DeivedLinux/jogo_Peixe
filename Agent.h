@@ -40,6 +40,7 @@ typedef struct {
 	int reproducedThisRound;
 	int boardValue;
 	int orientation;
+	int goingRight;
 	Shark* predator;
 	Trail* trail;
 } Fish;

@@ -20,5 +20,7 @@ int fish_reproduction(Elem* li, Fish* fish);
 void search_predador(Fish* fish);
 int* get_left_based_on_dir(int dir);
 int* get_right_based_on_dir(int dir);
+void create_fish_trail(Object oldObj, Object obj);
+void search_trail_to_follow(Fish* fish);
 
 #endif	

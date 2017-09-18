@@ -48,7 +48,7 @@ void setupFishVariables(Lista* listaShark, Lista* listaFish, Lista* listaTrail, 
 		}
 	}
 
-	setupTrail(listaTrail, my_trail_value);
+	//setupTrail(listaTrail, my_trail_value);
 }
 
 Fish* create_fish(){
@@ -67,7 +67,8 @@ Fish* create_fish(){
 	fish->predator = NULL; 
 	fish->trail = NULL;
 	fish->boardValue = my_fish_value;
-	fish->orientation = 0;
+	fish->orientation = 40;
+	fish->goingRight = 1;
 
 	return fish;
 }
@@ -88,7 +89,8 @@ Fish* create_son_fish(Object father1, Object father2){
 	fish->predator = NULL; 
 	fish->trail = NULL;
 	fish->boardValue = my_fish_value;
-	fish->orientation = 0;
+	fish->orientation = 40;
+	fish->goingRight = 1;
 
 	return fish;
 }
@@ -133,15 +135,7 @@ void fish_update(){
 
 void fish_movement(Fish* fish) {
 
-	/*Object sharkOldObj = shark->obj;
-	if(eat_fish_close(shark)){
-
-		if(shark->isLeader){
-			create_shark_trail(sharkOldObj, shark->obj);
-		}
-
-		return;
-	}*/
+	Object fishOldObj = fish->obj;
 
 
 	if(fish->isLeader){
@@ -151,7 +145,7 @@ void fish_movement(Fish* fish) {
 	}
 	else{
 
-		/*if(has_trail_pos(shark->obj.x, shark->obj.y, m_shark_value)){
+		/*if(has_trail_pos(fish->obj.x, fish->obj.y, my_fish_value)){
 			
 			Trail* trail = get_trail_by_pos(shark->obj.x, shark->obj.y);
 			if(trail != NULL){
@@ -172,8 +166,9 @@ void fish_movement(Fish* fish) {
 			}
 		}
 		else if(shark->trail == NULL){
-			search_trail(shark);
+			
 		}*/
+		search_trail_to_follow(fish);
 	}
 
 
@@ -189,29 +184,95 @@ void fish_movement(Fish* fish) {
 			int *right_coord = get_right_based_on_dir(fish->orientation);
 			int *left_coord = get_left_based_on_dir(fish->orientation);
 
-			nextX += right_coord[0];
-			nextY += right_coord[1];
+			if(fish->goingRight){
+				nextX += right_coord[0];
+				nextY += right_coord[1];
+			}
+			else{
+				nextX += left_coord[0];
+				nextY += left_coord[1];
+			}
 
-			printf("%i %i -- %i %i\n", fish->obj.x, fish->obj.y, nextX, nextY);
+			int tentarEsquerda = 0;
 
+			//TENTANDO DIREITA
 			if(!is_valid_pos(nextX, nextY)){
 				adjuste_pos_circle_scenery(&nextX, &nextY);
 			}
 
-			if(is_free_pos(nextX, nextY)){
-				
+			if(is_free_pos(nextX, nextY) && board->spaces[nextX][nextY] != my_trail_value){
+
 				Object oldObj = fish->obj;
 				fish->obj = move_object(fish->obj, nextX, nextY, fish->boardValue);
 				
 				//create_shark_trail(sharkOldObj, shark->obj);
 				if(distance(oldObj, fish->obj) == 0){
-					fish->predator = NULL;
-					fish->state = FISH_IDLE;
+					tentarEsquerda = 1;
+					if(fish->goingRight == 1)
+						fish->goingRight = 0;
+					else
+						fish->goingRight = 1;
+
+					//fish->predator = NULL;
+					//fish->state = FISH_IDLE;
 				}
 				else{
 					fish->orientation += 1;
 				}
 			}
+			else{
+				printf("nao foi uma posicao valida\n");
+				tentarEsquerda = 1;
+				if(fish->goingRight == 1)
+					fish->goingRight = 0;
+				else
+					fish->goingRight = 1;
+			}
+
+			if(tentarEsquerda){
+
+				printf("going Right %i\n", fish->goingRight);
+				if(fish->goingRight == 1){
+					nextX += -left_coord[0];
+					nextY += -left_coord[1];
+
+					nextX += right_coord[0];
+					nextY += right_coord[1];
+				}
+				else{
+					nextX += -right_coord[0];
+					nextY += -right_coord[1];
+
+					nextX += left_coord[0];
+					nextY += left_coord[1];
+				}
+
+				if(!is_valid_pos(nextX, nextY)){
+					adjuste_pos_circle_scenery(&nextX, &nextY);
+				}
+
+				if(is_free_pos(nextX, nextY)){
+
+					Object oldObj = fish->obj;
+					fish->obj = move_object(fish->obj, nextX, nextY, fish->boardValue);
+					
+					if(distance(oldObj, fish->obj) == 0){
+						//fish->predator = NULL;
+						//fish->state = FISH_IDLE;
+						move_to_random_pos(&fish->obj, m_mov_possib, fish->boardValue);
+					}
+					else{
+						fish->orientation += -1;
+					}
+				}
+				else{
+
+					fish->predator = NULL;
+					fish->state = FISH_IDLE;
+				}				
+			}
+
+			create_fish_trail(fishOldObj, fish->obj);
 
 			
 		}
@@ -247,24 +308,24 @@ void fish_movement(Fish* fish) {
 	}
 	else if(fish->state == FISH_RUNNING){
 
-		/*if( shark->trail == NULL)
-			shark->state = SHARK_IDLE;
+		if( fish->trail == NULL)
+			fish->state = FISH_IDLE;
 		else{
-			Trail* trail = shark->trail;
-			int nextX = shark->obj.x;
-			int nextY = shark->obj.y;
+			Trail* trail = fish->trail;
+			int nextX = fish->obj.x;
+			int nextY = fish->obj.y;
 
-			if(shark->obj.x < trail->obj.x){
+			if(fish->obj.x < trail->obj.x){
 				nextX += 1;
 			}
-			else if(shark->obj.x > trail->obj.x){
+			else if(fish->obj.x > trail->obj.x){
 				nextX += -1;
 			}
 			else{
-				if(shark->obj.y < trail->obj.y){
+				if(fish->obj.y < trail->obj.y){
 					nextY += 1;
 				}
-				else if(shark->obj.y > trail->obj.y){
+				else if(fish->obj.y > trail->obj.y){
 					nextY += -1;
 				}
 			}
@@ -273,12 +334,12 @@ void fish_movement(Fish* fish) {
 				adjuste_pos_circle_scenery(&nextX, &nextY);
 			}
 
-			shark->obj = move_object(shark->obj, nextX, nextY, shark->boardValue);
-			if(distance(sharkOldObj, shark->obj) == 0){
-				shark->trail = NULL;
-				shark->state = SHARK_IDLE;
+			fish->obj = move_object(fish->obj, nextX, nextY, fish->boardValue);
+			if(distance(fishOldObj, fish->obj) == 0){
+				fish->trail = NULL;
+				fish->state = FISH_IDLE;
 			}
-		}*/
+		}
 	}
 
 	if(fish->state == FISH_IDLE){
@@ -290,6 +351,7 @@ void fish_movement(Fish* fish) {
 int* get_right_based_on_dir(int dir){
 
 	int *coord = (int*)malloc(2 * sizeof(int));
+	dir = dir % 4;
 
 	coord[0] = 0;
 	coord[1] = -1;
@@ -319,10 +381,10 @@ int* get_right_based_on_dir(int dir){
 int* get_left_based_on_dir(int dir){
 
 	int *coord = (int*)malloc(2 * sizeof(int));
+	dir = dir % 4;
 
 	coord[0] = 0;
 	coord[1] = -1;
-
 
 	if(dir == 0){
 		coord[0] = -1;
@@ -406,6 +468,78 @@ void search_predador(Fish* fish){
 				betterDistance = d;
 				fish->state = FISH_RUNNING;
 				printf("lider achou um predator proximo\n");
+			}
+		}
+		
+		li = li->prox;
+	}
+}
+
+void create_fish_trail(Object oldObj, Object obj){
+
+	//Se não tem rastro na posição antiga do tubarão - cria um novo rastro
+	int diff_x = obj.x - oldObj.x;
+	int diff_y = obj.y - oldObj.y;
+
+	if(is_valid_pos(oldObj.x, oldObj.y)){
+		
+		Trail* trail = (Trail*)malloc(sizeof(Trail));
+		trail->obj.x = oldObj.x;
+		trail->obj.y = oldObj.y;
+		trail->tempo = 0;
+		trail->dir = getDir(diff_x, diff_y);
+		trail->obj.sprite = m_trail_sprite;
+
+		trail->obj = create_object(trail->obj, trail->obj.x, trail->obj.y, my_trail_value);
+
+		insere_lista_final(m_li_trail, trail);
+
+	}
+	else if(has_trail_pos(oldObj.x, oldObj.y, 0)) {
+
+		Trail* trail = get_trail_by_pos(oldObj.x, oldObj.y);
+
+		if(trail != NULL){
+
+			trail->tempo = 0;
+			int oldDir = trail->dir;
+			int currentDir = getDir(diff_x, diff_y);
+			int newDir = (oldDir + currentDir) / 2;
+			newDir = smoothDir(newDir);
+			
+			//Verificar se temos que espelhar, e caso positivo, espelhar de fato
+			if(abs(currentDir - oldDir) >= 180){
+				int espelhar = rand() % 2;
+				if(espelhar == 1){
+					if(newDir < 180){
+						newDir += 180;
+					}
+					else{
+						newDir += -180;
+					}
+				}
+			}
+
+			trail->dir = newDir;
+		}
+	}
+}
+
+void search_trail_to_follow(Fish* fish){
+
+	int betterDistance = 1000;
+
+	Elem* li = *m_li_trail;
+	while(li != NULL){
+
+		Trail* trail = getTrail(li);
+		int d = distance(fish->obj, trail->obj);
+		if(d <= fish->perceptionRange && d > 0){
+
+			if(d < betterDistance){
+				fish->trail = trail;
+				betterDistance = d;
+				fish->state = FISH_RUNNING;
 			}
 		}
 		
